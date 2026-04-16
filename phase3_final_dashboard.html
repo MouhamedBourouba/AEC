@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>المرحلة الثالثة: تشخيص التوازن والتوصيات</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #060a14; --bg2: #0f1729; --card: #141d30; --card2: #1a2540;
+    --text: #e2e8f0; --text2: #7c8db0; --muted: #4a5a78;
+    --blue: #3b82f6; --purple: #8b5cf6; --green: #10b981; --amber: #f59e0b;
+    --red: #ef4444; --orange: #f97316; --cyan: #06b6d4; --pink: #ec4899;
+    --border: rgba(255,255,255,0.05);
+    --r: 14px; --rs: 8px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Cairo','Inter',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 700px 500px at 20% 10%,rgba(139,92,246,0.07),transparent),radial-gradient(ellipse 600px 400px at 80% 80%,rgba(59,130,246,0.05),transparent);z-index:-1}
+.c{max-width:1500px;margin:0 auto;padding:22px 32px}
+.hdr{text-align:center;margin-bottom:32px;padding:32px;background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(6,182,212,0.08));border-radius:var(--r);border:1px solid var(--border);position:relative;overflow:hidden}
+.hdr::after{content:'';position:absolute;inset:-50%;background:conic-gradient(from 0deg,transparent,rgba(168,85,247,0.03),transparent,rgba(6,182,212,0.02),transparent);animation:sp 30s linear infinite}
+@keyframes sp{100%{transform:rotate(360deg)}}
+.hdr-c{position:relative;z-index:1}
+.hdr h1{font-size:2rem;font-weight:900;background:linear-gradient(135deg,#a855f7,#06b6d4,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;line-height:1.5}
+.hdr .sub{font-size:0.95rem;color:var(--text2)}
+.hdr .bdg{display:inline-block;background:rgba(168,85,247,0.15);color:var(--purple);padding:5px 16px;border-radius:25px;font-size:0.8rem;font-weight:600;margin-top:10px;border:1px solid rgba(168,85,247,0.25)}
+.tabs{display:flex;gap:5px;margin-bottom:25px;padding:4px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);overflow-x:auto;flex-wrap:nowrap}
+.tab{padding:10px 20px;border-radius:var(--rs);cursor:pointer;font-weight:600;font-size:0.85rem;color:var(--text2);transition:all .3s;white-space:nowrap;border:none;background:none;font-family:inherit}
+.tab:hover{color:var(--text);background:rgba(255,255,255,0.04)}
+.tab.on{background:linear-gradient(135deg,var(--purple),var(--cyan));color:#fff;box-shadow:0 4px 12px rgba(139,92,246,.3)}
+.tc{display:none;animation:fi .4s ease}.tc.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.kg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.kc{background:var(--card);border-radius:var(--r);padding:20px;border:1px solid var(--border);transition:all .3s}
+.kc:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.ki{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:10px}
+.kv{font-size:1.5rem;font-weight:800;margin-bottom:3px;line-height:1.2}
+.kl{color:var(--text2);font-size:0.8rem;font-weight:500}
+.ks{font-size:0.72rem;margin-top:5px;padding:2px 8px;border-radius:15px;display:inline-block}
+.ks-d{background:rgba(239,68,68,.15);color:var(--red)}.ks-w{background:rgba(245,158,11,.15);color:var(--amber)}.ks-g{background:rgba(16,185,129,.15);color:var(--green)}
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:20px;margin-bottom:24px}
+.cc{background:var(--card);border-radius:var(--r);padding:22px;border:1px solid var(--border)}
+.cc h3{font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.cc h3 .ic{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.cw{position:relative;height:320px}.cw.t{height:420px}.cw.s{height:260px}
+.tc-box{background:var(--card);border-radius:var(--r);padding:22px;border:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.tc-box h3{font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:rgba(168,85,247,.1);color:var(--purple);font-weight:700;padding:10px 12px;text-align:right;white-space:nowrap;border-bottom:2px solid rgba(168,85,247,.2)}
+td{padding:9px 12px;border-bottom:1px solid var(--border)}tr:hover td{background:rgba(255,255,255,.02)}
+.zb{display:inline-block;padding:2px 10px;border-radius:15px;font-size:.75rem;font-weight:700}
+.z0{background:rgba(34,197,94,.15);color:#22c55e}.zI{background:rgba(234,179,8,.15);color:#eab308}
+.z2a{background:rgba(249,115,22,.15);color:#f97316}.z2b{background:rgba(239,68,68,.15);color:#ef4444}
+.z3{background:rgba(168,85,247,.15);color:#a855f7}.zN{background:rgba(107,114,128,.15);color:#6b7280}
+.hot{color:var(--red);font-weight:700}.safe{color:var(--green)}
+.ab{padding:16px 20px;border-radius:var(--rs);margin-bottom:20px;border:1px solid;font-size:.88rem;line-height:1.8}
+.ab-d{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.15);color:#fca5a5}
+.ab-w{background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.15);color:#fcd34d}
+.ab-i{background:rgba(59,130,246,.06);border-color:rgba(59,130,246,.15);color:#93c5fd}
+.ab-s{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.15);color:#86efac}
+/* Map */
+.map-container{position:relative;width:100%;height:600px;background:var(--card);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;margin-bottom:20px}
+.map-svg{width:100%;height:100%}
+.map-legend{position:absolute;bottom:15px;right:15px;background:rgba(10,14,26,.9);padding:14px 18px;border-radius:var(--rs);border:1px solid var(--border);font-size:.78rem}
+.map-legend .leg-item{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.map-legend .leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.map-title{position:absolute;top:15px;right:15px;background:rgba(10,14,26,.9);padding:10px 16px;border-radius:var(--rs);border:1px solid var(--border)}
+.map-title h4{font-size:.95rem;font-weight:700;color:var(--text)}
+.map-title p{font-size:.75rem;color:var(--text2)}
+/* Rec cards */
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-bottom:24px}
+.rec-card{background:var(--card);border-radius:var(--r);padding:22px;border-left:4px solid;transition:all .3s}
+.rec-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.rec-card h4{font-size:.95rem;font-weight:700;margin-bottom:8px}
+.rec-card p{font-size:.82rem;color:var(--text2);line-height:1.8}
+.rec-card .priority{font-size:.72rem;padding:2px 8px;border-radius:12px;display:inline-block;margin-bottom:8px;font-weight:600}
+.gauge-row{display:flex;gap:15px;margin-bottom:24px;flex-wrap:wrap}
+.gauge{flex:1;min-width:200px;background:var(--card);border-radius:var(--r);padding:18px;border:1px solid var(--border);text-align:center}
+.gauge .g-label{font-size:.8rem;color:var(--text2);margin-bottom:8px}
+.gauge .g-value{font-size:1.8rem;font-weight:800;margin-bottom:4px}
+.gauge .g-bar{height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;margin-top:8px}
+.gauge .g-fill{height:100%;border-radius:4px;transition:width 1.5s ease}
+.gauge .g-desc{font-size:.72rem;color:var(--muted);margin-top:6px}
+@media(max-width:768px){.c{padding:12px}.cg{grid-template-columns:1fr}.kg{grid-template-columns:repeat(2,1fr)}.hdr h1{font-size:1.3rem}}
+</style>
+</head>
+<body>
+<div class="c">
+<div class="hdr"><div class="hdr-c">
+<h1>التقرير النهائي: تشخيص التوازن والتوصيات الاستراتيجية</h1>
+<p class="sub">Phase 3: Balance Diagnosis, GIS Mapping & Strategic Recommendations</p>
+<span class="bdg">🎯 دراسة شاملة — محفظة CATNAT 2025</span>
+</div></div>
+
+<div class="tabs">
+<button class="tab on" onclick="st('diag')">🎯 تشخيص التوازن</button>
+<button class="tab" onclick="st('map')">🗺️ خريطة GIS</button>
+<button class="tab" onclick="st('accum')">📊 لوحة التراكمات</button>
+<button class="tab" onclick="st('vuln')">⚡ مؤشرات الهشاشة</button>
+<button class="tab" onclick="st('recs')">💡 التوصيات الاستراتيجية</button>
+</div>
+
+<!-- ============ DIAGNOSIS ============ -->
+<div id="t-diag" class="tc on">
+<div class="ab ab-d">
+🚨 <strong>تشخيص عام:</strong> المحفظة تعاني من <strong>اختلال كبير</strong> في التوزيع الجغرافي. 69.5% من رأس المال يتركز في المناطق الأعلى خطورة (IIb+III)، بينما المناطق الأقل خطورة (0+I) لا تمثل سوى 11.7%.
+</div>
+
+<div class="kg">
+<div class="kc"><div class="ki" style="background:rgba(168,85,247,.15)">🏦</div><div class="kv" style="color:var(--purple)">84.34 Mrd د.ج</div><div class="kl">رأس المال المقدر</div></div>
+<div class="kc"><div class="ki" style="background:rgba(239,68,68,.15)">⚠️</div><div class="kv" style="color:var(--red)">69.5%</div><div class="kl">تركيز عالي الخطورة</div><span class="ks ks-d">IIb + III</span></div>
+<div class="kc"><div class="ki" style="background:rgba(249,115,22,.15)">🔥</div><div class="kv" style="color:var(--orange)">28</div><div class="kl">ولايات متجاوزة للاحتفاظ</div></div>
+<div class="kc"><div class="ki" style="background:rgba(6,182,212,.15)">📊</div><div class="kv" style="color:var(--cyan)">21.17 Mrd</div><div class="kl">PML-475 الإجمالي</div><span class="ks ks-d">4234% احتفاظ</span></div>
+<div class="kc"><div class="ki" style="background:rgba(236,72,153,.15)">🎯</div><div class="kv" style="color:var(--pink)">ALGER</div><div class="kl">أخطر ولاية</div><span class="ks ks-d">37.9x احتفاظ</span></div>
+</div>
+
+<div class="cc" style="margin-bottom:20px">
+<h3><span class="ic" style="background:rgba(168,85,247,.15)">📊</span> فجوة التوازن: التوزيع الفعلي vs المستهدف</h3>
+<p style="color:var(--text2);font-size:.85rem;margin-bottom:15px;line-height:1.7">يقارن هذا المخطط بين التوزيع الفعلي لرأس المال حسب المنطقة الزلزالية والتوزيع المستهدف (المثالي) لتحقيق توازن المحفظة.</p>
+<div class="cw"><canvas id="gapChart"></canvas></div>
+</div>
+
+<div class="gauge-row">
+<div class="gauge">
+<div class="g-label">Zone 0 — ضعيفة جدًا</div>
+<div class="g-value" style="color:#22c55e">8.0%</div>
+<div class="g-bar"><div class="g-fill" style="width:20.0%;background:#22c55e"></div></div>
+<div class="g-desc">المستهدف: 15% | الفجوة: -7.0pp</div>
+<div style="margin-top:6px;font-size:.72rem;color:var(--amber)">تحت المستهدف 🟡</div>
+</div>
+<div class="gauge">
+<div class="g-label">Zone I — ضعيفة</div>
+<div class="g-value" style="color:#eab308">3.7%</div>
+<div class="g-bar"><div class="g-fill" style="width:9.25%;background:#eab308"></div></div>
+<div class="g-desc">المستهدف: 15% | الفجوة: -11.3pp</div>
+<div style="margin-top:6px;font-size:.72rem;color:var(--blue)">ضعف تركيز 🔵</div>
+</div>
+<div class="gauge">
+<div class="g-label">Zone IIa — متوسطة</div>
+<div class="g-value" style="color:#f97316">18.5%</div>
+<div class="g-bar"><div class="g-fill" style="width:46.25%;background:#f97316"></div></div>
+<div class="g-desc">المستهدف: 25% | الفجوة: -6.5pp</div>
+<div style="margin-top:6px;font-size:.72rem;color:var(--amber)">تحت المستهدف 🟡</div>
+</div>
+<div class="gauge">
+<div class="g-label">Zone IIb — مرتفعة</div>
+<div class="g-value" style="color:#ef4444">33.7%</div>
+<div class="g-bar"><div class="g-fill" style="width:84.25%;background:#ef4444"></div></div>
+<div class="g-desc">المستهدف: 25% | الفجوة: +8.7pp</div>
+<div style="margin-top:6px;font-size:.72rem;color:var(--orange)">فوق المستهدف 🟠</div>
+</div>
+<div class="gauge">
+<div class="g-label">Zone III — مرتفعة جدًا</div>
+<div class="g-value" style="color:#a855f7">35.8%</div>
+<div class="g-bar"><div class="g-fill" style="width:89.5%;background:#a855f7"></div></div>
+<div class="g-desc">المستهدف: 15% | الفجوة: +20.8pp</div>
+<div style="margin-top:6px;font-size:.72rem;color:var(--red)">تركيز مفرط 🔴</div>
+</div>
+<div class="gauge">
+<div class="g-label">N/C — —</div>
+<div class="g-value" style="color:#6b7280">0.3%</div>
+<div class="g-bar"><div class="g-fill" style="width:0.75%;background:#6b7280"></div></div>
+<div class="g-desc">المستهدف: 5% | الفجوة: -4.7pp</div>
+<div style="margin-top:6px;font-size:.72rem;color:var(--green)">متوازن ✅</div>
+</div>
+</div>
+</div>
+
+<!-- ============ GIS MAP ============ -->
+<div id="t-map" class="tc">
+<div class="ab ab-i">
+🗺️ <strong>خريطة المحفظة على التقسيم الزلزالي RPA:</strong> خريطة تفاعلية — يمكنك التكبير والتصغير والسحب. انقر على أي دائرة لعرض التفاصيل. حجم الدائرة = رأس المال | اللون = المنطقة الزلزالية. استخدم عناصر التحكم لتصفية المناطق.
+</div>
+<div id="leaflet-map" style="width:100%;height:650px;border-radius:var(--r);border:1px solid var(--border);overflow:hidden;"></div>
+<div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;">
+<button class="map-filter-btn on" data-zone="all" onclick="filterZone('all',this)" style="all:unset;cursor:pointer;padding:8px 18px;border-radius:var(--rs);background:rgba(139,92,246,.2);color:var(--purple);font-weight:600;font-size:.8rem;font-family:inherit;border:1px solid rgba(139,92,246,.3);transition:all .3s;">🌍 الكل</button>
+<button class="map-filter-btn" data-zone="III" onclick="filterZone('III',this)" style="all:unset;cursor:pointer;padding:8px 18px;border-radius:var(--rs);background:rgba(168,85,247,.1);color:#a855f7;font-weight:600;font-size:.8rem;font-family:inherit;border:1px solid rgba(168,85,247,.2);transition:all .3s;">🟣 Zone III</button>
+<button class="map-filter-btn" data-zone="IIb" onclick="filterZone('IIb',this)" style="all:unset;cursor:pointer;padding:8px 18px;border-radius:var(--rs);background:rgba(239,68,68,.1);color:#ef4444;font-weight:600;font-size:.8rem;font-family:inherit;border:1px solid rgba(239,68,68,.2);transition:all .3s;">🔴 Zone IIb</button>
+<button class="map-filter-btn" data-zone="IIa" onclick="filterZone('IIa',this)" style="all:unset;cursor:pointer;padding:8px 18px;border-radius:var(--rs);background:rgba(249,115,22,.1);color:#f97316;font-weight:600;font-size:.8rem;font-family:inherit;border:1px solid rgba(249,115,22,.2);transition:all .3s;">🟠 Zone IIa</button>
+<button class="map-filter-btn" data-zone="I" onclick="filterZone('I',this)" style="all:unset;cursor:pointer;padding:8px 18px;border-radius:var(--rs);background:rgba(234,179,8,.1);color:#eab308;font-weight:600;font-size:.8rem;font-family:inherit;border:1px solid rgba(234,179,8,.2);transition:all .3s;">🟡 Zone I</button>
+<button class="map-filter-btn" data-zone="0" onclick="filterZone('0',this)" style="all:unset;cursor:pointer;padding:8px 18px;border-radius:var(--rs);background:rgba(34,197,94,.1);color:#22c55e;font-weight:600;font-size:.8rem;font-family:inherit;border:1px solid rgba(34,197,94,.2);transition:all .3s;">🟢 Zone 0</button>
+<button class="map-filter-btn" data-zone="exceed" onclick="filterZone('exceed',this)" style="all:unset;cursor:pointer;padding:8px 18px;border-radius:var(--rs);background:rgba(239,68,68,.1);color:#ef4444;font-weight:600;font-size:.8rem;font-family:inherit;border:1px solid rgba(239,68,68,.3);transition:all .3s;">🔥 متجاوزة فقط</button>
+</div>
+</div>
+
+<!-- ============ ACCUMULATION ============ -->
+<div id="t-accum" class="tc">
+<div class="cg">
+<div class="cc"><h3><span class="ic" style="background:rgba(239,68,68,.15)">🔥</span> تراكمات رأس المال vs حد الاحتفاظ</h3><div class="cw t"><canvas id="accumChart2"></canvas></div></div>
+<div class="cc"><h3><span class="ic" style="background:rgba(168,85,247,.15)">📊</span> التوزيع الجغرافي لرأس المال</h3><div class="cw t"><canvas id="geoDistChart"></canvas></div></div>
+</div>
+
+<div class="tc-box">
+<h3><span class="ic" style="background:rgba(249,115,22,.15)">📋</span> لوحة التراكمات: الولاية × نوع الخطر (أعلى 20)</h3>
+<table>
+<thead><tr><th>#</th><th>الولاية</th><th>المنطقة</th><th>صناعية</th><th>تجارية</th><th>غير محدد</th><th>الإجمالي (M DA)</th><th>% إجمالي</th><th>الحالة</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>ALGER</strong></td><td><span class="zb z3">III</span></td><td>1.78 Mrd</td><td>5.41 Mrd</td><td>11.73 Mrd</td><td><strong>18.93 Mrd</strong></td><td>22.4%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>2</td><td><strong>SETIF</strong></td><td><span class="zb z2b">IIb</span></td><td>2.82 Mrd</td><td>677.3 M</td><td>5.58 Mrd</td><td><strong>9.08 Mrd</strong></td><td>10.8%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>3</td><td><strong>ORAN</strong></td><td><span class="zb z2a">IIa</span></td><td>15.4 M</td><td>3.20 Mrd</td><td>3.65 Mrd</td><td><strong>6.87 Mrd</strong></td><td>8.1%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>4</td><td><strong>TIZI OUZOU</strong></td><td><span class="zb z3">III</span></td><td>40.5 M</td><td>540.3 M</td><td>4.72 Mrd</td><td><strong>5.30 Mrd</strong></td><td>6.3%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>5</td><td><strong>TAMENRASSET</strong></td><td><span class="zb z0">0</span></td><td>79.9 M</td><td>165.2 M</td><td>4.73 Mrd</td><td><strong>4.98 Mrd</strong></td><td>5.9%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>6</td><td><strong>CONSTANTINE</strong></td><td><span class="zb z2b">IIb</span></td><td>57.4 M</td><td>1.65 Mrd</td><td>1.13 Mrd</td><td><strong>2.84 Mrd</strong></td><td>3.4%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>7</td><td><strong>B.B ARRERIDJ</strong></td><td><span class="zb z2b">IIb</span></td><td>104.4 M</td><td>899.8 M</td><td>1.63 Mrd</td><td><strong>2.64 Mrd</strong></td><td>3.1%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>8</td><td><strong>BATNA</strong></td><td><span class="zb z2a">IIa</span></td><td>5.0 M</td><td>5.0 M</td><td>2.62 Mrd</td><td><strong>2.63 Mrd</strong></td><td>3.1%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>9</td><td><strong>BEJAIA</strong></td><td><span class="zb z2b">IIb</span></td><td>17.1 M</td><td>760.5 M</td><td>1.63 Mrd</td><td><strong>2.41 Mrd</strong></td><td>2.9%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>10</td><td><strong>MASCARA</strong></td><td><span class="zb z2a">IIa</span></td><td>0</td><td>1.20 Mrd</td><td>959.4 M</td><td><strong>2.16 Mrd</strong></td><td>2.6%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>11</td><td><strong>BOUMERDES</strong></td><td><span class="zb z3">III</span></td><td>241.7 M</td><td>944.2 M</td><td>955.2 M</td><td><strong>2.14 Mrd</strong></td><td>2.5%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>12</td><td><strong>ANNABA</strong></td><td><span class="zb z2b">IIb</span></td><td>388.5 M</td><td>992.0 M</td><td>505.6 M</td><td><strong>1.89 Mrd</strong></td><td>2.2%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>13</td><td><strong>TIPAZA</strong></td><td><span class="zb z3">III</span></td><td>3.8 M</td><td>555.1 M</td><td>1.27 Mrd</td><td><strong>1.83 Mrd</strong></td><td>2.2%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>14</td><td><strong>JIJEL</strong></td><td><span class="zb z2b">IIb</span></td><td>0</td><td>1.7 M</td><td>1.74 Mrd</td><td><strong>1.74 Mrd</strong></td><td>2.1%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>15</td><td><strong>EL TAREF</strong></td><td><span class="zb z2a">IIa</span></td><td>5.1 M</td><td>1.63 Mrd</td><td>100.0 M</td><td><strong>1.74 Mrd</strong></td><td>2.1%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>16</td><td><strong>BLIDA</strong></td><td><span class="zb z3">III</span></td><td>300.7 M</td><td>326.3 M</td><td>943.5 M</td><td><strong>1.57 Mrd</strong></td><td>1.9%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>17</td><td><strong>MILA</strong></td><td><span class="zb z2b">IIb</span></td><td>12.6 M</td><td>863.8 M</td><td>618.8 M</td><td><strong>1.50 Mrd</strong></td><td>1.8%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>18</td><td><strong>BISKRA</strong></td><td><span class="zb zI">I</span></td><td>6.7 M</td><td>985.5 M</td><td>371.8 M</td><td><strong>1.36 Mrd</strong></td><td>1.6%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>19</td><td><strong>AIN DEFLA</strong></td><td><span class="zb z2b">IIb</span></td><td>418.8 M</td><td>610.2 M</td><td>330.0 M</td><td><strong>1.36 Mrd</strong></td><td>1.6%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+<tr><td>20</td><td><strong>MOSTAGANEM</strong></td><td><span class="zb z2b">IIb</span></td><td>6.3 M</td><td>662.9 M</td><td>614.3 M</td><td><strong>1.28 Mrd</strong></td><td>1.5%</td><td><span class="hot">🔴 متجاوز</span></td></tr>
+</tbody></table></div>
+
+<div class="cc">
+<h3><span class="ic" style="background:rgba(6,182,212,.15)">📊</span> هيكل المحفظة: المنطقة × نوع الخطر (رأس المال)</h3>
+<div class="cw"><canvas id="ztHeatChart"></canvas></div>
+</div>
+</div>
+
+<!-- ============ VULNERABILITY ============ -->
+<div id="t-vuln" class="tc">
+<div class="ab ab-w">
+⚡ <strong>مؤشرات الهشاشة:</strong> تقيس هذه المؤشرات نسبة رأس المال المعرض للخطر مرجحة بمستوى الخطورة الزلزالية. كلما ارتفع المؤشر، زادت هشاشة الولاية.
+</div>
+
+<div class="tc-box">
+<h3><span class="ic" style="background:rgba(239,68,68,.15)">⚡</span> مؤشرات الهشاشة حسب الولاية (أعلى 25)</h3>
+<table>
+<thead><tr><th>#</th><th>الولاية</th><th>المنطقة</th><th>رأس المال (M DA)</th><th>التركيز %</th><th>مؤشر الخطر المركب</th><th>PML-250 (M DA)</th><th>PML-475 (M DA)</th><th>التقييم</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>ALGER</strong></td><td><span class="zb z3">III</span></td><td>18.93 Mrd</td><td>22.4%</td><td><strong>1.122</strong></td><td>4.16 Mrd</td><td>6.62 Mrd</td><td><span class="hot">🔴 هشاشة عالية جداً</span></td></tr>
+<tr><td>2</td><td><strong>SETIF</strong></td><td><span class="zb z2b">IIb</span></td><td>9.08 Mrd</td><td>10.8%</td><td><strong>0.431</strong></td><td>1.36 Mrd</td><td>2.27 Mrd</td><td><span style="color:var(--orange)">🟠 هشاشة مرتفعة</span></td></tr>
+<tr><td>3</td><td><strong>TIZI OUZOU</strong></td><td><span class="zb z3">III</span></td><td>5.30 Mrd</td><td>6.3%</td><td><strong>0.314</strong></td><td>1.17 Mrd</td><td>1.86 Mrd</td><td><span style="color:var(--orange)">🟠 هشاشة مرتفعة</span></td></tr>
+<tr><td>4</td><td><strong>ORAN</strong></td><td><span class="zb z2a">IIa</span></td><td>6.87 Mrd</td><td>8.1%</td><td><strong>0.244</strong></td><td>687.1 M</td><td>1.24 Mrd</td><td><span style="color:var(--orange)">🟠 هشاشة مرتفعة</span></td></tr>
+<tr><td>5</td><td><strong>CONSTANTINE</strong></td><td><span class="zb z2b">IIb</span></td><td>2.84 Mrd</td><td>3.4%</td><td><strong>0.135</strong></td><td>426.0 M</td><td>710.0 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>6</td><td><strong>BOUMERDES</strong></td><td><span class="zb z3">III</span></td><td>2.14 Mrd</td><td>2.5%</td><td><strong>0.127</strong></td><td>471.0 M</td><td>749.4 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>7</td><td><strong>B.B ARRERIDJ</strong></td><td><span class="zb z2b">IIb</span></td><td>2.64 Mrd</td><td>3.1%</td><td><strong>0.125</strong></td><td>395.3 M</td><td>658.8 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>8</td><td><strong>BEJAIA</strong></td><td><span class="zb z2b">IIb</span></td><td>2.41 Mrd</td><td>2.9%</td><td><strong>0.114</strong></td><td>361.2 M</td><td>601.9 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>9</td><td><strong>TIPAZA</strong></td><td><span class="zb z3">III</span></td><td>1.83 Mrd</td><td>2.2%</td><td><strong>0.108</strong></td><td>402.3 M</td><td>640.1 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>10</td><td><strong>BATNA</strong></td><td><span class="zb z2a">IIa</span></td><td>2.63 Mrd</td><td>3.1%</td><td><strong>0.094</strong></td><td>263.1 M</td><td>473.5 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>11</td><td><strong>BLIDA</strong></td><td><span class="zb z3">III</span></td><td>1.57 Mrd</td><td>1.9%</td><td><strong>0.093</strong></td><td>345.5 M</td><td>549.7 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>12</td><td><strong>ANNABA</strong></td><td><span class="zb z2b">IIb</span></td><td>1.89 Mrd</td><td>2.2%</td><td><strong>0.089</strong></td><td>282.9 M</td><td>471.5 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>13</td><td><strong>JIJEL</strong></td><td><span class="zb z2b">IIb</span></td><td>1.74 Mrd</td><td>2.1%</td><td><strong>0.083</strong></td><td>261.5 M</td><td>435.8 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>14</td><td><strong>MASCARA</strong></td><td><span class="zb z2a">IIa</span></td><td>2.16 Mrd</td><td>2.6%</td><td><strong>0.077</strong></td><td>215.8 M</td><td>388.5 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>15</td><td><strong>MILA</strong></td><td><span class="zb z2b">IIb</span></td><td>1.50 Mrd</td><td>1.8%</td><td><strong>0.071</strong></td><td>224.3 M</td><td>373.8 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>16</td><td><strong>AIN DEFLA</strong></td><td><span class="zb z2b">IIb</span></td><td>1.36 Mrd</td><td>1.6%</td><td><strong>0.064</strong></td><td>203.9 M</td><td>339.8 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>17</td><td><strong>EL TAREF</strong></td><td><span class="zb z2a">IIa</span></td><td>1.74 Mrd</td><td>2.1%</td><td><strong>0.062</strong></td><td>173.8 M</td><td>312.8 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>18</td><td><strong>MOSTAGANEM</strong></td><td><span class="zb z2b">IIb</span></td><td>1.28 Mrd</td><td>1.5%</td><td><strong>0.061</strong></td><td>192.5 M</td><td>320.9 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>19</td><td><strong>TAMENRASSET</strong></td><td><span class="zb z0">0</span></td><td>4.98 Mrd</td><td>5.9%</td><td><strong>0.059</strong></td><td>99.5 M</td><td>248.9 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>20</td><td><strong>SKIKDA</strong></td><td><span class="zb z2b">IIb</span></td><td>1.18 Mrd</td><td>1.4%</td><td><strong>0.056</strong></td><td>177.4 M</td><td>295.6 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>21</td><td><strong>MEDEA</strong></td><td><span class="zb z2b">IIb</span></td><td>1.13 Mrd</td><td>1.3%</td><td><strong>0.053</strong></td><td>168.9 M</td><td>281.5 M</td><td><span style="color:var(--amber)">🟡 هشاشة متوسطة</span></td></tr>
+<tr><td>22</td><td><strong>M SILA</strong></td><td><span class="zb z2b">IIb</span></td><td>860.2 M</td><td>1.0%</td><td><strong>0.041</strong></td><td>129.0 M</td><td>215.1 M</td><td><span class="safe">🟢 مقبول</span></td></tr>
+<tr><td>23</td><td><strong>BISKRA</strong></td><td><span class="zb zI">I</span></td><td>1.36 Mrd</td><td>1.6%</td><td><strong>0.032</strong></td><td>81.8 M</td><td>136.4 M</td><td><span class="safe">🟢 مقبول</span></td></tr>
+<tr><td>24</td><td><strong>BOUIRA</strong></td><td><span class="zb z2b">IIb</span></td><td>508.2 M</td><td>0.6%</td><td><strong>0.024</strong></td><td>76.2 M</td><td>127.0 M</td><td><span class="safe">🟢 مقبول</span></td></tr>
+<tr><td>25</td><td><strong>TIARET</strong></td><td><span class="zb z2a">IIa</span></td><td>627.1 M</td><td>0.7%</td><td><strong>0.022</strong></td><td>62.7 M</td><td>112.9 M</td><td><span class="safe">🟢 مقبول</span></td></tr>
+</tbody></table></div>
+
+<div class="cg">
+<div class="cc"><h3><span class="ic" style="background:rgba(239,68,68,.15)">📊</span> مؤشر الخطر المركب — أعلى 15 ولاية</h3><div class="cw t"><canvas id="vulnChart"></canvas></div></div>
+<div class="cc"><h3><span class="ic" style="background:rgba(168,85,247,.15)">📊</span> رادار المخاطر حسب المنطقة</h3><div class="cw t"><canvas id="radarChart"></canvas></div></div>
+</div>
+</div>
+
+<!-- ============ RECOMMENDATIONS ============ -->
+<div id="t-recs" class="tc">
+<div class="ab ab-s">
+💡 <strong>مذكرة التوصيات الاستراتيجية</strong> — تستند هذه التوصيات إلى نتائج المراحل الثلاث من التحليل وتهدف إلى إعادة توازن المحفظة وتقليل المخاطر.
+</div>
+
+<h3 style="font-size:1.1rem;margin-bottom:18px;color:var(--red)">🔴 إجراءات عاجلة (0-3 أشهر)</h3>
+<div class="rec-grid">
+<div class="rec-card" style="border-color:var(--red)">
+<span class="priority" style="background:rgba(239,68,68,.15);color:var(--red)">أولوية قصوى</span>
+<h4>1. برنامج إعادة التأمين الكارثي</h4>
+<p>ترتيب عقد إعادة تأمين Cat XL يغطي سيناريو 250 سنة على الأقل (~12.8 مليار د.ج). يُوصى بطبقات متعددة:<br>
+• طبقة أولى: 0-500 مليون (احتفاظ)<br>
+• طبقة ثانية: 500 مليون - 5 مليار<br>
+• طبقة ثالثة: 5-15 مليار</p>
+</div>
+<div class="rec-card" style="border-color:var(--red)">
+<span class="priority" style="background:rgba(239,68,68,.15);color:var(--red)">أولوية قصوى</span>
+<h4>2. سقوف الاكتتاب — ولاية الجزائر</h4>
+<p>فرض سقف اكتتاب فوري في ولاية الجزائر (37.9x قدرة الاحتفاظ). تحديد حد أقصى للقيمة المؤمنة الفردية في Zone III:<br>
+• عقارات: 50 مليون د.ج<br>
+• تجاري: 100 مليون د.ج<br>
+• صناعي: 200 مليون د.ج</p>
+</div>
+<div class="rec-card" style="border-color:var(--red)">
+<span class="priority" style="background:rgba(239,68,68,.15);color:var(--red)">أولوية قصوى</span>
+<h4>3. استكمال البيانات الحرجة</h4>
+<p>برنامج عاجل لاستكمال:<br>
+• VALEUR_ASSURÉE لجميع الوثائق (100% ناقصة)<br>
+• TYPE لـ 76.5% من الوثائق غير المصنفة<br>
+• إضافة حقل نوع البناء (خرسانة، فولاذ، بناء تقليدي)</p>
+</div>
+</div>
+
+<h3 style="font-size:1.1rem;margin-bottom:18px;margin-top:10px;color:var(--orange)">🟠 إجراءات متوسطة المدى (3-12 شهر)</h3>
+<div class="rec-grid">
+<div class="rec-card" style="border-color:var(--orange)">
+<span class="priority" style="background:rgba(249,115,22,.15);color:var(--orange)">أولوية عالية</span>
+<h4>4. سياسة التوزيع الجغرافي</h4>
+<p>إعادة توازن المحفظة نحو التوزيع المستهدف:<br>
+• <strong>تقليل:</strong> Zone III من 35.8% إلى 15% (-20.8pp)<br>
+• <strong>تقليل:</strong> Zone IIb من 33.7% إلى 25% (-8.7pp)<br>
+• <strong>زيادة:</strong> Zone 0+I من 11.7% إلى 30% (+18.3pp)<br>
+• <strong>زيادة:</strong> Zone IIa من 18.5% إلى 25% (+6.5pp)</p>
+</div>
+<div class="rec-card" style="border-color:var(--orange)">
+<span class="priority" style="background:rgba(249,115,22,.15);color:var(--orange)">أولوية عالية</span>
+<h4>5. التسعير التفاضلي</h4>
+<p>مراجعة التسعير لتعكس المخاطر الفعلية:<br>
+• Zone III: زيادة 40-60% في الأقساط<br>
+• Zone IIb: زيادة 20-30%<br>
+• Zone 0+I: تخفيض 10-20% لتحفيز الطلب<br>
+• تسعير إضافي حسب نوع البناء</p>
+</div>
+<div class="rec-card" style="border-color:var(--orange)">
+<span class="priority" style="background:rgba(249,115,22,.15);color:var(--orange)">أولوية عالية</span>
+<h4>6. شبكة وكلاء المناطق الآمنة</h4>
+<p>تطوير شبكة التوزيع في المناطق ذات الخطورة المنخفضة:<br>
+• ولايات الجنوب (Zone 0): حملات تسويق مستهدفة<br>
+• ولايات الهضاب (Zone I): شراكات مع البنوك<br>
+• تحفيز الوكلاء بعمولات أعلى في هذه المناطق</p>
+</div>
+</div>
+
+<h3 style="font-size:1.1rem;margin-bottom:18px;margin-top:10px;color:var(--amber)">🟡 إجراءات طويلة المدى (12-36 شهر)</h3>
+<div class="rec-grid">
+<div class="rec-card" style="border-color:var(--amber)">
+<span class="priority" style="background:rgba(245,158,11,.15);color:var(--amber)">استراتيجية</span>
+<h4>7. نظام مراقبة التراكمات</h4>
+<p>تطوير أداة آلية لمراقبة التراكمات في الوقت الحقيقي:<br>
+• تنبيهات عند بلوغ 80% من سقف الاكتتاب<br>
+• لوحة قيادة يومية للتراكمات<br>
+• ربط بنظام المعلومات الجغرافية</p>
+</div>
+<div class="rec-card" style="border-color:var(--amber)">
+<span class="priority" style="background:rgba(245,158,11,.15);color:var(--amber)">استراتيجية</span>
+<h4>8. برنامج الوقاية من الأضرار</h4>
+<p>إطلاق برنامج وقاية للمؤمن لهم في Zone III:<br>
+• تدقيق زلزالي مجاني للمنشآت الصناعية<br>
+• خصومات على الأقساط عند التقيد بمعايير RPA<br>
+• شراكة مع CGS لتقييم المباني</p>
+</div>
+<div class="rec-card" style="border-color:var(--amber)">
+<span class="priority" style="background:rgba(245,158,11,.15);color:var(--amber)">استراتيجية</span>
+<h4>9. نمذجة كارثية متقدمة</h4>
+<p>الاستثمار في نموذج PML متقدم:<br>
+• استخدام بيانات CGS الحقيقية<br>
+• نمذجة على مستوى البلدية<br>
+• تكامل بيانات نوع البناء والعمر<br>
+• سيناريوهات متعددة (بومرداس 2003, شلف 1980)</p>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+function st(id){
+document.querySelectorAll('.tc').forEach(t=>t.classList.remove('on'));
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+document.getElementById('t-'+id).classList.add('on');
+event.target.classList.add('on');
+}
+Chart.defaults.color='#7c8db0';Chart.defaults.borderColor='rgba(255,255,255,0.05)';
+Chart.defaults.font.family="'Cairo','Inter',sans-serif";
+
+// Gap chart
+new Chart(document.getElementById('gapChart'),{
+type:'bar',
+data:{
+labels:["Zone 0 (\u0636\u0639\u064a\u0641\u0629 \u062c\u062f\u064b\u0627)", "Zone I (\u0636\u0639\u064a\u0641\u0629)", "Zone IIa (\u0645\u062a\u0648\u0633\u0637\u0629)", "Zone IIb (\u0645\u0631\u062a\u0641\u0639\u0629)", "Zone III (\u0645\u0631\u062a\u0641\u0639\u0629 \u062c\u062f\u064b\u0627)", "N/C (\u2014)"],
+datasets:[
+{label:'الفعلي %',data:[8.0, 3.7, 18.5, 33.7, 35.8, 0.3],backgroundColor:["#22c55ecc", "#eab308cc", "#f97316cc", "#ef4444cc", "#a855f7cc", "#6b7280cc"],borderColor:["#22c55e", "#eab308", "#f97316", "#ef4444", "#a855f7", "#6b7280"],borderWidth:2,borderRadius:6,barPercentage:.35},
+{label:'المستهدف %',data:[15, 15, 25, 25, 15, 5],backgroundColor:'rgba(255,255,255,0.1)',borderColor:'rgba(255,255,255,0.3)',borderWidth:2,borderRadius:6,borderDash:[4,4],barPercentage:.35}
+]
+},
+options:{responsive:true,maintainAspectRatio:false,
+plugins:{legend:{position:'bottom',labels:{usePointStyle:true}}},
+scales:{y:{beginAtZero:true,title:{display:true,text:'%'},grid:{color:'rgba(255,255,255,0.04)'}},x:{grid:{display:false}}}
+}
+});
+
+// Accumulation chart
+const accW=["ALGER", "SETIF", "ORAN", "TIZI OUZOU", "TAMENRASSET", "CONSTANTINE", "B.B ARRERIDJ", "BATNA", "BEJAIA", "MASCARA", "BOUMERDES", "ANNABA", "TIPAZA", "JIJEL", "EL TAREF", "BLIDA", "MILA", "BISKRA", "AIN DEFLA", "MOSTAGANEM"];
+const accSI=[18928.3, 9081.3, 6870.7, 5302.7, 4977.5, 2840.1, 2635.2, 2630.8, 2407.7, 2158.5, 2141.1, 1886.0, 1828.8, 1743.2, 1738.0, 1570.6, 1495.1, 1364.0, 1359.0, 1283.5];
+const accC=["#a855f7", "#ef4444", "#f97316", "#a855f7", "#22c55e", "#ef4444", "#ef4444", "#f97316", "#ef4444", "#f97316", "#a855f7", "#ef4444", "#a855f7", "#ef4444", "#f97316", "#a855f7", "#ef4444", "#eab308", "#ef4444", "#ef4444"];
+const retLine=500.0;
+new Chart(document.getElementById('accumChart2'),{
+type:'bar',
+data:{labels:accW,datasets:[
+{label:'رأس المال (M DA)',data:accSI,backgroundColor:accC.map(c=>c+'cc'),borderColor:accC,borderWidth:2,borderRadius:5},
+{label:'حد الاحتفاظ',data:Array(accW.length).fill(retLine),type:'line',borderColor:'#ef4444',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false}
+]},
+options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true}}},scales:{x:{beginAtZero:true,title:{display:true,text:'M DA'},grid:{color:'rgba(255,255,255,0.04)'}},y:{grid:{display:false}}}}
+});
+
+// Geographic distribution (doughnut)
+new Chart(document.getElementById('geoDistChart'),{
+type:'doughnut',
+data:{labels:["Zone 0 (\u0636\u0639\u064a\u0641\u0629 \u062c\u062f\u064b\u0627)", "Zone I (\u0636\u0639\u064a\u0641\u0629)", "Zone IIa (\u0645\u062a\u0648\u0633\u0637\u0629)", "Zone IIb (\u0645\u0631\u062a\u0641\u0639\u0629)", "Zone III (\u0645\u0631\u062a\u0641\u0639\u0629 \u062c\u062f\u064b\u0627)", "N/C (\u2014)"],
+datasets:[{data:[6774563713, 3145724400, 15586592427, 28460606528, 30153881600, 219262980],backgroundColor:["#22c55e", "#eab308", "#f97316", "#ef4444", "#a855f7", "#6b7280"],borderWidth:2,borderColor:'#141d30',hoverOffset:10}]},
+options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'bottom',labels:{padding:10,usePointStyle:true}},tooltip:{callbacks:{label:ctx=>ctx.label+': '+(ctx.raw/1e9).toFixed(2)+' Mrd DA'}}}}
+});
+
+// Zone × Type heatmap (stacked bar)
+const ztD={"III": {"Industrielle": 2371837630.0, "Commerciale": 8092158825.0, "Non class\u00e9": 19689885144.602737}, "0": {"Industrielle": 84920000.0, "Commerciale": 693418600.0, "Non class\u00e9": 5996225113.150684}, "IIa": {"Industrielle": 156001000.0, "Commerciale": 7221968946.876713, "Non class\u00e9": 8208622479.80137}, "I": {"Industrielle": 6666666.666666667, "Commerciale": 1130069333.3333356, "Non class\u00e9": 2008988399.9999998}, "IIb": {"Industrielle": 3861982646.6666636, "Commerciale": 8982901202.922377, "Non class\u00e9": 15615722678.82923}, "NC": {"Industrielle": 0, "Commerciale": 40000000.0, "Non class\u00e9": 179262980.0}};
+const tps=['Industrielle','Commerciale','Non classé'];
+const tpLabels=['صناعية','تجارية','غير محدد'];
+const tpC=['#3b82f6','#f59e0b','#6b7280'];
+new Chart(document.getElementById('ztHeatChart'),{
+type:'bar',
+data:{labels:["Zone 0", "Zone I", "Zone IIa", "Zone IIb", "Zone III", "N/C"],
+datasets:tps.map((t,i)=>({label:tpLabels[i],data:["0", "I", "IIa", "IIb", "III", "NC"].map(z=>ztD[z]?Math.round((ztD[z][t]||0)/1e6):0),backgroundColor:tpC[i]+'99',borderColor:tpC[i],borderWidth:1,borderRadius:3}))},
+options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,beginAtZero:true,title:{display:true,text:'M DA'},grid:{color:'rgba(255,255,255,0.04)'}}}}
+});
+
+// Vulnerability bar chart
+const vulnW=["ALGER", "SETIF", "TIZI OUZOU", "ORAN", "CONSTANTINE", "BOUMERDES", "B.B ARRERIDJ", "BEJAIA", "TIPAZA", "BATNA", "BLIDA", "ANNABA", "JIJEL", "MASCARA", "MILA"];
+const vulnS=[1.1221, 0.4307, 0.3144, 0.2444, 0.1347, 0.1269, 0.125, 0.1142, 0.1084, 0.0936, 0.0931, 0.0894, 0.0827, 0.0768, 0.0709];
+const vulnC=["#a855f7", "#ef4444", "#a855f7", "#f97316", "#ef4444", "#a855f7", "#ef4444", "#ef4444", "#a855f7", "#f97316", "#a855f7", "#ef4444", "#ef4444", "#f97316", "#ef4444"];
+new Chart(document.getElementById('vulnChart'),{
+type:'bar',
+data:{labels:vulnW,datasets:[{label:'مؤشر الخطر المركب',data:vulnS,backgroundColor:vulnC.map(c=>c+'cc'),borderColor:vulnC,borderWidth:2,borderRadius:5}]},
+options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,title:{display:true,text:'Risk-Adjusted Score'},grid:{color:'rgba(255,255,255,0.04)'}},y:{grid:{display:false}}}}
+});
+
+// Radar chart
+const radarZones=["Zone 0", "Zone I", "Zone IIa", "Zone IIb", "Zone III"];
+new Chart(document.getElementById('radarChart'),{
+type:'radar',
+data:{labels:radarZones,datasets:[
+{label:'تركيز رأس المال %',data:[8.0, 3.7, 18.5, 33.7, 35.8],borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.12)',pointBackgroundColor:'#3b82f6'},
+{label:'التوزيع المستهدف %',data:[15, 15, 25, 25, 15],borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.08)',pointBackgroundColor:'#10b981',borderDash:[4,3]},
+{label:'معامل الخطر (x10)',data:[0.0, 10.0, 15.0, 20.0, 25.0],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.08)',pointBackgroundColor:'#ef4444'}
+]},
+options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true}}},scales:{r:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},angleLines:{color:'rgba(255,255,255,0.05)'},pointLabels:{font:{size:11}}}}}
+});
+
+// ========== LEAFLET MAP ==========
+const mapData = [{"name": "ALGER", "code": 16, "lat": 36.75, "lon": 3.06, "zone": "III", "n": 9067, "si": 18928292452, "prime": 37856585, "communes": 108, "color": "#a855f7", "exceeds": true, "radius": 41.27403930670096}, {"name": "SETIF", "code": 19, "lat": 36.19, "lon": 5.41, "zone": "IIb", "n": 4180, "si": 9081304667, "prime": 13621957, "communes": 59, "color": "#ef4444", "exceeds": true, "radius": 28.588763876740092}, {"name": "ORAN", "code": 31, "lat": 35.7, "lon": -0.63, "zone": "IIa", "n": 1984, "si": 6870653353, "prime": 6870653, "communes": 29, "color": "#f97316", "exceeds": true, "radius": 24.866821304756087}, {"name": "TIZI OUZOU", "code": 15, "lat": 36.71, "lon": 4.05, "zone": "III", "n": 4171, "si": 5302660348, "prime": 10605321, "communes": 81, "color": "#a855f7", "exceeds": true, "radius": 21.84581038399724}, {"name": "TAMENRASSET", "code": 11, "lat": 22.79, "lon": 5.53, "zone": "0", "n": 728, "si": 4977460933, "prime": 2488730, "communes": 8, "color": "#22c55e", "exceeds": true, "radius": 21.165336850226637}, {"name": "CONSTANTINE", "code": 25, "lat": 36.36, "lon": 6.61, "zone": "IIb", "n": 1831, "si": 2840118333, "prime": 4260178, "communes": 14, "color": "#ef4444", "exceeds": true, "radius": 15.987828182714473}, {"name": "B.B ARRERIDJ", "code": 34, "lat": 35.98, "lon": 4.76, "zone": "IIb", "n": 1939, "si": 2635155298, "prime": 3952733, "communes": 42, "color": "#ef4444", "exceeds": true, "radius": 15.400129117498201}, {"name": "BATNA", "code": 5, "lat": 35.56, "lon": 6.17, "zone": "IIa", "n": 1416, "si": 2630762600, "prime": 2630763, "communes": 38, "color": "#f97316", "exceeds": true, "radius": 15.387288065153001}, {"name": "BEJAIA", "code": 6, "lat": 36.75, "lon": 5.08, "zone": "IIb", "n": 1469, "si": 2407706758, "prime": 3611560, "communes": 45, "color": "#ef4444", "exceeds": true, "radius": 14.720516575863599}, {"name": "MASCARA", "code": 29, "lat": 35.4, "lon": 0.14, "zone": "IIa", "n": 595, "si": 2158455370, "prime": 2158455, "communes": 20, "color": "#f97316", "exceeds": true, "radius": 13.937753882889453}, {"name": "BOUMERDES", "code": 35, "lat": 36.77, "lon": 3.47, "zone": "III", "n": 1088, "si": 2141090364, "prime": 4282181, "communes": 38, "color": "#a855f7", "exceeds": true, "radius": 13.881575299280303}, {"name": "ANNABA", "code": 23, "lat": 36.9, "lon": 7.77, "zone": "IIb", "n": 777, "si": 1886040536, "prime": 2829061, "communes": 11, "color": "#ef4444", "exceeds": true, "radius": 13.028570458855821}, {"name": "TIPAZA", "code": 42, "lat": 36.59, "lon": 2.45, "zone": "III", "n": 1636, "si": 1828761235, "prime": 3657522, "communes": 42, "color": "#a855f7", "exceeds": true, "radius": 12.829205398231021}, {"name": "JIJEL", "code": 18, "lat": 36.82, "lon": 5.77, "zone": "IIb", "n": 1382, "si": 1743245980, "prime": 2614869, "communes": 20, "color": "#ef4444", "exceeds": true, "radius": 12.52565919223416}, {"name": "EL TAREF", "code": 36, "lat": 36.77, "lon": 8.31, "zone": "IIa", "n": 115, "si": 1737982890, "prime": 1737983, "communes": 13, "color": "#f97316", "exceeds": true, "radius": 12.506736588734888}, {"name": "BLIDA", "code": 9, "lat": 36.47, "lon": 2.83, "zone": "III", "n": 1142, "si": 1570551455, "prime": 3141103, "communes": 29, "color": "#a855f7", "exceeds": true, "radius": 11.889055090712635}, {"name": "MILA", "code": 43, "lat": 36.45, "lon": 6.26, "zone": "IIb", "n": 876, "si": 1495136947, "prime": 2242705, "communes": 28, "color": "#ef4444", "exceeds": true, "radius": 11.60010022370497}, {"name": "BISKRA", "code": 7, "lat": 34.85, "lon": 5.73, "zone": "I", "n": 259, "si": 1363961320, "prime": 1022971, "communes": 17, "color": "#eab308", "exceeds": true, "radius": 11.079554088500128}, {"name": "AIN DEFLA", "code": 44, "lat": 36.26, "lon": 1.97, "zone": "IIb", "n": 568, "si": 1359017492, "prime": 2038526, "communes": 22, "color": "#ef4444", "exceeds": true, "radius": 11.059456330371647}, {"name": "MOSTAGANEM", "code": 27, "lat": 35.93, "lon": 0.09, "zone": "IIb", "n": 577, "si": 1283478330, "prime": 1925217, "communes": 28, "color": "#ef4444", "exceeds": true, "radius": 10.747699741665016}, {"name": "SKIKDA", "code": 21, "lat": 36.88, "lon": 6.91, "zone": "IIb", "n": 441, "si": 1182551593, "prime": 1773827, "communes": 22, "color": "#ef4444", "exceeds": true, "radius": 10.316474368697847}, {"name": "MEDEA", "code": 26, "lat": 36.26, "lon": 2.75, "zone": "IIb", "n": 663, "si": 1125981247, "prime": 1688972, "communes": 29, "color": "#ef4444", "exceeds": true, "radius": 10.066693210781757}, {"name": "El Oued", "code": 39, "lat": 33.37, "lon": 6.85, "zone": "0", "n": 174, "si": 877988680, "prime": 438994, "communes": 15, "color": "#22c55e", "exceeds": true, "radius": 8.889262129108355}, {"name": "M SILA", "code": 28, "lat": 35.71, "lon": 4.54, "zone": "IIb", "n": 598, "si": 860229213, "prime": 1290344, "communes": 23, "color": "#ef4444", "exceeds": true, "radius": 8.798899317528306}, {"name": "TEBESSA", "code": 12, "lat": 35.4, "lon": 8.12, "zone": "I", "n": 316, "si": 778805067, "prime": 584104, "communes": 16, "color": "#eab308", "exceeds": true, "radius": 8.372123744904876}, {"name": "TIARET", "code": 14, "lat": 35.37, "lon": 1.32, "zone": "IIa", "n": 414, "si": 627118593, "prime": 627119, "communes": 15, "color": "#f97316", "exceeds": true, "radius": 7.512700806679641}, {"name": "TLEMCEN", "code": 13, "lat": 34.88, "lon": -1.32, "zone": "IIa", "n": 30, "si": 512964490, "prime": 512964, "communes": 6, "color": "#f97316", "exceeds": true, "radius": 6.7946158169538915}, {"name": "BOUIRA", "code": 10, "lat": 36.38, "lon": 3.9, "zone": "IIb", "n": 278, "si": 508170127, "prime": 762255, "communes": 27, "color": "#ef4444", "exceeds": true, "radius": 6.762788729510925}, {"name": "OUM EL BOUAGHI", "code": 4, "lat": 35.88, "lon": 7.11, "zone": "IIa", "n": 192, "si": 452660240, "prime": 452660, "communes": 11, "color": "#f97316", "exceeds": false, "radius": 6.382744048422373}, {"name": "LAGHOUAT", "code": 3, "lat": 33.8, "lon": 2.88, "zone": "I", "n": 184, "si": 380416680, "prime": 285313, "communes": 10, "color": "#eab308", "exceeds": false, "radius": 6}, {"name": "CHLEF", "code": 2, "lat": 36.17, "lon": 1.33, "zone": "III", "n": 139, "si": 376114920, "prime": 752230, "communes": 17, "color": "#a855f7", "exceeds": false, "radius": 6}, {"name": "KHENCHELA", "code": 40, "lat": 35.43, "lon": 7.14, "zone": "I", "n": 144, "si": 358055427, "prime": 268542, "communes": 14, "color": "#eab308", "exceeds": false, "radius": 6}, {"name": "OURGLA", "code": 30, "lat": 31.95, "lon": 5.33, "zone": "0", "n": 89, "si": 351774040, "prime": 175887, "communes": 6, "color": "#22c55e", "exceeds": false, "radius": 6}, {"name": "GUELMA", "code": 24, "lat": 36.46, "lon": 7.43, "zone": "IIa", "n": 115, "si": 302805930, "prime": 302806, "communes": 19, "color": "#f97316", "exceeds": false, "radius": 6}, {"name": "DJELFA", "code": 17, "lat": 34.67, "lon": 3.25, "zone": "I", "n": 22, "si": 120234347, "prime": 90176, "communes": 11, "color": "#eab308", "exceeds": false, "radius": 6}, {"name": "SAIDA", "code": 20, "lat": 34.83, "lon": 0.15, "zone": "I", "n": 30, "si": 102430560, "prime": 76823, "communes": 4, "color": "#eab308", "exceeds": false, "radius": 6}, {"name": "EL BAYADH", "code": 32, "lat": 33.69, "lon": 1.02, "zone": "IIa", "n": 42, "si": 95734000, "prime": 95734, "communes": 3, "color": "#f97316", "exceeds": false, "radius": 6}, {"name": "RELIZANE", "code": 48, "lat": 35.73, "lon": 0.56, "zone": "IIa", "n": 13, "si": 93472210, "prime": 93472, "communes": 4, "color": "#f97316", "exceeds": false, "radius": 6}, {"name": "SIDI BEL ABBES", "code": 22, "lat": 35.19, "lon": -0.63, "zone": "IIa", "n": 27, "si": 77350310, "prime": 77350, "communes": 3, "color": "#f97316", "exceeds": false, "radius": 6}, {"name": "GHARDAIA", "code": 47, "lat": 32.49, "lon": 3.67, "zone": "0", "n": 8, "si": 58095680, "prime": 29048, "communes": 3, "color": "#22c55e", "exceeds": false, "radius": 6}, {"name": "TISSEMSILT", "code": 38, "lat": 35.61, "lon": 1.81, "zone": "IIb", "n": 26, "si": 50803340, "prime": 76205, "communes": 7, "color": "#ef4444", "exceeds": false, "radius": 6}, {"name": "ADRAR", "code": 1, "lat": 27.87, "lon": -0.29, "zone": "0", "n": 11, "si": 35983600, "prime": 17992, "communes": 4, "color": "#22c55e", "exceeds": false, "radius": 6}, {"name": "AIN TIMOUCHENT", "code": 46, "lat": 35.29, "lon": -1.14, "zone": "IIa", "n": 7, "si": 18337440, "prime": 18337, "communes": 5, "color": "#f97316", "exceeds": false, "radius": 6}, {"name": "BECHAR", "code": 8, "lat": 31.62, "lon": -2.22, "zone": "0", "n": 3, "si": 15000000, "prime": 7500, "communes": 2, "color": "#22c55e", "exceeds": false, "radius": 6}, {"name": "SOUK AHRAS", "code": 41, "lat": 36.29, "lon": 7.95, "zone": "IIa", "n": 6, "si": 8295000, "prime": 8295, "communes": 5, "color": "#f97316", "exceeds": false, "radius": 6}, {"name": "16  -", "code": 16, "lat": 36.75, "lon": 3.06, "zone": "III", "n": 4, "si": 4999625, "prime": 9999, "communes": 4, "color": "#a855f7", "exceeds": false, "radius": 6}, {"name": "ILLIZI", "code": 33, "lat": 26.51, "lon": 8.47, "zone": "0", "n": 3, "si": 3600000, "prime": 1800, "communes": 1, "color": "#22c55e", "exceeds": false, "radius": 6}, {"name": "23  -", "code": 23, "lat": 36.9, "lon": 7.77, "zone": "IIb", "n": 1, "si": 1666667, "prime": 2500, "communes": 1, "color": "#ef4444", "exceeds": false, "radius": 6}, {"name": "9   -", "code": 9, "lat": 36.47, "lon": 2.83, "zone": "III", "n": 1, "si": 1411200, "prime": 2822, "communes": 1, "color": "#a855f7", "exceeds": false, "radius": 6}];
+const zoneColors = {"0": "#22c55e", "I": "#eab308", "IIa": "#f97316", "IIb": "#ef4444", "III": "#a855f7", "NC": "#6b7280"};
+const zoneLabelsFr = {"0": "Zone 0", "I": "Zone I", "IIa": "Zone IIa", "IIb": "Zone IIb", "III": "Zone III", "NC": "N/C"};
+const zoneLabelsAr = {"0": "\u0636\u0639\u064a\u0641\u0629 \u062c\u062f\u064b\u0627", "I": "\u0636\u0639\u064a\u0641\u0629", "IIa": "\u0645\u062a\u0648\u0633\u0637\u0629", "IIb": "\u0645\u0631\u062a\u0641\u0639\u0629", "III": "\u0645\u0631\u062a\u0641\u0639\u0629 \u062c\u062f\u064b\u0627", "NC": "\u2014"};
+const retention = 500000000;
+
+const map = L.map('leaflet-map',{
+    center:[28.5, 2.5],
+    zoom:5,
+    zoomControl:true,
+    attributionControl:true
+});
+
+// Dark CartoDB tile layer
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; <a href="https://carto.com">CARTO</a> | &copy; <a href="https://osm.org">OSM</a>',
+    subdomains:'abcd',
+    maxZoom:19
+}).addTo(map);
+
+// Store all markers for filtering
+const allMarkers = [];
+
+mapData.forEach(d => {
+    const radius = Math.max(8, Math.min(50, Math.sqrt(d.si / 1e8) * 4.5));
+    const color = zoneColors[d.zone] || '#666';
+    const borderColor = d.exceeds ? '#ef4444' : 'rgba(255,255,255,0.4)';
+    const borderWeight = d.exceeds ? 3 : 1;
+
+    const siB = d.si >= 1e9 ? (d.si/1e9).toFixed(2)+' Mrd' : (d.si/1e6).toFixed(1)+' M';
+    const primeM = (d.prime/1e6).toFixed(1);
+    const retRatio = (d.si / retention).toFixed(1);
+    const exceedBadge = d.exceeds
+        ? '<span style="background:rgba(239,68,68,.2);color:#ef4444;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🔴 يتجاوز الاحتفاظ ('+retRatio+'x)</span>'
+        : '<span style="background:rgba(16,185,129,.2);color:#10b981;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🟢 ضمن الحدود</span>';
+
+    const popup = `
+        <div style="font-family:Cairo,sans-serif;direction:rtl;min-width:260px;">
+            <div style="font-size:15px;font-weight:800;margin-bottom:6px;color:#1a1a2e;">${d.name}</div>
+            <div style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:8px;
+                background:${color}22;color:${color};border:1px solid ${color}44;">Zone ${d.zone} — ${zoneLabelsAr[d.zone] || ''}</div>
+            <table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;">
+                <tr><td style="padding:4px 0;color:#666;">📋 عدد الوثائق</td><td style="padding:4px 0;font-weight:700;text-align:left;">${d.n.toLocaleString()}</td></tr>
+                <tr><td style="padding:4px 0;color:#666;">💰 الأقساط</td><td style="padding:4px 0;font-weight:700;text-align:left;">${primeM} M DA</td></tr>
+                <tr><td style="padding:4px 0;color:#666;">🏦 رأس المال المقدر</td><td style="padding:4px 0;font-weight:700;text-align:left;color:${color}">${siB} DA</td></tr>
+                <tr><td style="padding:4px 0;color:#666;">🏘️ البلديات</td><td style="padding:4px 0;font-weight:700;text-align:left;">${d.communes}</td></tr>
+            </table>
+            <div style="margin-top:8px;text-align:center;">${exceedBadge}</div>
+        </div>`;
+
+    const marker = L.circleMarker([d.lat, d.lon], {
+        radius: radius,
+        fillColor: color,
+        color: borderColor,
+        weight: borderWeight,
+        opacity: 0.9,
+        fillOpacity: 0.65,
+        className: 'pulse-marker'
+    }).addTo(map);
+
+    marker.bindPopup(popup, {maxWidth:320, className:'custom-popup'});
+    marker.bindTooltip(d.name, {permanent:false, direction:'top', offset:[0,-radius], className:'custom-tooltip'});
+    marker._data = d;
+    allMarkers.push(marker);
+});
+
+// Custom Legend Control
+const legend = L.control({position:'bottomright'});
+legend.onAdd = function() {
+    const div = L.DomUtil.create('div','leaflet-legend');
+    div.style.cssText = 'background:rgba(10,15,30,.92);padding:14px 18px;border-radius:10px;border:1px solid rgba(255,255,255,.1);color:#e2e8f0;font-family:Cairo,sans-serif;font-size:12px;direction:rtl;backdrop-filter:blur(8px);';
+    div.innerHTML = '<div style="font-weight:700;margin-bottom:8px;font-size:13px;">🗺️ دليل الخريطة</div>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="width:14px;height:14px;border-radius:50%;background:#a855f7;display:inline-block;"></span> Zone III — مرتفعة جدًا</div>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="width:14px;height:14px;border-radius:50%;background:#ef4444;display:inline-block;"></span> Zone IIb — مرتفعة</div>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="width:14px;height:14px;border-radius:50%;background:#f97316;display:inline-block;"></span> Zone IIa — متوسطة</div>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="width:14px;height:14px;border-radius:50%;background:#eab308;display:inline-block;"></span> Zone I — ضعيفة</div>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="width:14px;height:14px;border-radius:50%;background:#22c55e;display:inline-block;"></span> Zone 0 — ضعيفة جدًا</div>'
+        + '<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:6px;padding-top:6px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;"><span style="width:14px;height:14px;border-radius:50%;border:2.5px solid #ef4444;display:inline-block;"></span> يتجاوز قدرة الاحتفاظ</div></div>'
+        + '<div style="margin-top:6px;font-size:10px;color:#7c8db0;">حجم الدائرة = رأس المال المقدر</div>';
+    return div;
+};
+legend.addTo(map);
+
+// Zone filter function
+function filterZone(zone, btn) {
+    document.querySelectorAll('.map-filter-btn').forEach(b => b.style.opacity = '0.5');
+    btn.style.opacity = '1';
+
+    allMarkers.forEach(m => {
+        const d = m._data;
+        let show = true;
+        if (zone === 'all') show = true;
+        else if (zone === 'exceed') show = d.exceeds;
+        else show = d.zone === zone;
+
+        if (show) {
+            m.setStyle({fillOpacity: 0.65, opacity: 0.9});
+            m.setRadius(Math.max(8, Math.min(50, Math.sqrt(d.si / 1e8) * 4.5)));
+        } else {
+            m.setStyle({fillOpacity: 0.08, opacity: 0.15});
+            m.setRadius(4);
+        }
+    });
+}
+
+// Fix map size when tab becomes visible
+const origSt = st;
+function st(id) {
+    document.querySelectorAll('.tc').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+    document.getElementById('t-'+id).classList.add('on');
+    event.target.classList.add('on');
+    if (id === 'map') setTimeout(() => map.invalidateSize(), 100);
+}
+</script>
+<style>
+.custom-popup .leaflet-popup-content-wrapper {background:white;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.05);}
+.custom-popup .leaflet-popup-tip {background:white;}
+.custom-tooltip {background:rgba(10,15,30,.88)!important;color:#e2e8f0!important;border:1px solid rgba(255,255,255,.15)!important;border-radius:6px!important;font-family:Cairo,sans-serif!important;font-weight:600!important;font-size:11px!important;padding:4px 10px!important;box-shadow:0 4px 12px rgba(0,0,0,.3)!important;}
+.leaflet-control-zoom a {background:rgba(10,15,30,.85)!important;color:#e2e8f0!important;border-color:rgba(255,255,255,.1)!important;}
+.leaflet-control-zoom a:hover {background:rgba(139,92,246,.3)!important;}
+</style>
+</body></html>
