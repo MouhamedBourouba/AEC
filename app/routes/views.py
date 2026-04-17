@@ -215,3 +215,8 @@ def time_exposure():
     if redir: return redir
     return render_template('time_exposure.html', dataset=dataset, all_datasets=all_datasets, active_page='time')
 
+@views_bp.route('/dashboard/map')
+def gis_map():
+    redir, dataset, all_datasets = get_dashboard_context('views.gis_map')
+    if redir: return redir
+    return render_template('map.html', dataset=dataset, all_datasets=all_datasets, active_page='map')

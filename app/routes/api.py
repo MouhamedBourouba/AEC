@@ -115,3 +115,37 @@ def by_year():
         {'year': r['year'], 'count': r['count'], 'total_capital': round(r['total_capital'])}
         for r in rows
     ])
+
+@api_bp.route('/by-wilaya-map')
+def by_wilaya_map():
+    """Return per-wilaya aggregates (capital, count, premium) for the GIS map."""
+    ds_id = request.args.get('dataset_id', type=int)
+    con = get_db_connection(ds_id)
+    if not con:
+        return jsonify({'error': 'Invalid or missing dataset_id'}), 400
+
+    try:
+        cur = con.cursor()
+        cur.execute("""
+            SELECT wilaya,
+                   SUM(capital_assure) AS total_capital,
+                   COUNT(id)           AS count,
+                   SUM(prime_nette)    AS total_premium
+            FROM policies
+            WHERE wilaya IS NOT NULL AND wilaya != ''
+            GROUP BY wilaya
+            ORDER BY total_capital DESC
+        """)
+        rows = cur.fetchall()
+    finally:
+        con.close()
+
+    return jsonify([
+        {
+            'wilaya':        r['wilaya'],
+            'total_capital': round(r['total_capital'] or 0),
+            'count':         r['count'],
+            'total_premium': round(r['total_premium'] or 0),
+        }
+        for r in rows
+    ])
