@@ -1,308 +1,332 @@
 {% extends 'dashboard_base.html' %}
-{% block page_title %}Diagnostic & Recommendations{% endblock %}
-{% block page_subtitle %}Health check of the earthquake portfolio based on RPA classification{% endblock %}
+{% block page_title %}Risk Analysis{% endblock %}
+{% block page_subtitle %}Portfolio diagnostic and PML simulation — RPA seismic classification{% endblock %}
 
-{% block content %}
-<section class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
-    <!-- Portfolio Health Index -->
-    <div class="kpi-card" style="border-left: 4px solid var(--accent);">
-        <div class="kpi-content">
-            <div class="kpi-label">Overall Health Score</div>
-            <div class="kpi-value" id="healthScore">—</div>
-            <div class="kpi-label" style="font-size: 0.75rem;" id="healthStatus">Evaluating...</div>
-        </div>
-    </div>
-    
-    <!-- Balance Ratio -->
-    <div class="kpi-card" style="border-left: 4px solid #facc15;">
-        <div class="kpi-content">
-            <div class="kpi-label">High-Risk Exposure (Zone III & IIb)</div>
-            <div class="kpi-value" id="highRiskExposure">—</div>
-            <div class="kpi-label" style="font-size: 0.75rem;">% of Total Capital</div>
-        </div>
-    </div>
-    
-    <!-- Estimated MPL -->
-    <div class="kpi-card" style="border-left: 4px solid #f87171;">
-        <div class="kpi-content">
-            <div class="kpi-label">Portfolio MPL Baseline</div>
-            <div class="kpi-value" id="mplBaseline">—</div>
-            <div class="kpi-label" style="font-size: 0.75rem;">Standard RPA damage ratios</div>
-        </div>
-    </div>
-</section>
-
-<section class="charts-grid" style="margin-top: 1.5rem; grid-template-columns: 1fr 1fr;">
-    <!-- Vulnerability Gauge -->
-    <div class="chart-card">
-        <div class="chart-card-header">
-            <h2>Portfolio Vulnerability Distribution</h2>
-        </div>
-        <div class="chart-wrap donut-wrap" style="height: 250px;">
-            <canvas id="vulnChart"></canvas>
-        </div>
-        <div class="custom-legend" style="display: flex; justify-content: center; gap: 1.5rem; margin-top: 1rem;">
-            <div class="legend-item"><span class="legend-dot" style="background:#f87171"></span>Critical</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#facc15"></span>Warning</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>Safe</div>
-        </div>
-    </div>
-
-    <!-- Recommendations -->
-    <div class="chart-card" style="display: flex; flex-direction: column;">
-        <div class="chart-card-header">
-            <h2>Strategic Recommendations</h2>
-        </div>
-        <div id="recommendationsList" style="flex: 1; overflow-y: auto; padding-right: 0.5rem; display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-            <div id="insightsPlaceholder" style="color: var(--muted); text-align: center; margin-top: 2rem;">Generating insights…</div>
-        </div>
-    </div>
-</section>
-
-<section class="charts-grid" style="margin-top: 1.5rem; grid-template-columns: 1fr;">
-    <div class="chart-card">
-        <div class="chart-card-header">
-            <h2>Wilaya Vulnerability Index</h2>
-            <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">Vulnerability = Capital Insured × Zone Risk Factor. Sorted by most vulnerable.</p>
-        </div>
-        <div id="diagGrid" class="ag-theme-alpine-dark ag-grid-container" style="height: 400px; width: 100%; border-radius: 0.5rem; margin-top: 1rem;"></div>
-    </div>
-</section>
-
+{% block head %}
 <style>
-    .rec-card {
-        padding: 1rem;
-        border-radius: 0.5rem;
-        background: var(--surface2);
-        border-left: 4px solid var(--border);
-    }
-    .rec-card.danger { border-left-color: #f87171; background: rgba(248, 113, 113, 0.05); }
-    .rec-card.warning { border-left-color: #facc15; background: rgba(250, 204, 21, 0.05); }
-    .rec-card.info { border-left-color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
-    .rec-card.success { border-left-color: #4ade80; background: rgba(74, 222, 128, 0.05); }
-    
-    .rec-title { font-weight: 600; margin-bottom: 0.25rem; font-size: 0.95rem; }
-    .rec-desc { font-size: 0.85rem; color: #cbd5e1; }
-    
-    .vuln-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 11px;
-        font-weight: 600;
-        text-align: center;
-        min-width: 60px;
-    }
-    .vuln-critical { background-color: rgba(248, 113, 113, 0.2); color: #f87171; }
-    .vuln-warning { background-color: rgba(250, 204, 21, 0.2); color: #facc15; }
-    .vuln-safe { background-color: rgba(74, 222, 128, 0.2); color: #4ade80; }
+.tab-bar{display:flex;gap:.5rem;background:var(--surface);border:1px solid var(--border);border-radius:.65rem;padding:.3rem;width:fit-content;margin-bottom:1.5rem}
+.tab-btn{background:none;border:none;color:var(--muted);padding:.45rem 1.2rem;border-radius:.45rem;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:.2s}
+.tab-btn.active{background:rgba(187,202,20,.15);color:var(--text)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.rec-card{padding:1rem;border-radius:.5rem;background:var(--surface2);border-left:4px solid var(--border)}
+.rec-card.danger{border-left-color:#f87171;background:rgba(248,113,113,.05)}
+.rec-card.warning{border-left-color:#facc15;background:rgba(250,204,21,.05)}
+.rec-card.info{border-left-color:#38bdf8;background:rgba(56,189,248,.05)}
+.rec-card.success{border-left-color:#4ade80;background:rgba(74,222,128,.05)}
+.rec-title{font-weight:600;margin-bottom:.25rem;font-size:.95rem}
+.rec-desc{font-size:.85rem;color:#cbd5e1}
+.vuln-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;text-align:center;min-width:60px}
+.vuln-critical{background:rgba(248,113,113,.2);color:#f87171}
+.vuln-warning{background:rgba(250,204,21,.2);color:#facc15}
+.vuln-safe{background:rgba(74,222,128,.2);color:#4ade80}
+.scenario-bar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem}
+.scenario-tabs{display:flex;gap:.5rem;background:var(--surface);border:1px solid var(--border);border-radius:.65rem;padding:.3rem}
+.scenario-btn{background:none;border:none;color:var(--muted);padding:.45rem 1rem;border-radius:.45rem;font-family:inherit;font-size:.85rem;font-weight:500;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:.4rem}
+.scenario-btn.active{background:rgba(187,202,20,.15);color:var(--text)}
+.scenario-btn:hover:not(.active){background:rgba(255,255,255,.05);color:var(--text)}
+.scenario-sub{font-size:.72rem;opacity:.7}
+.status-badge{font-size:.75rem;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:.3rem .75rem;border-radius:2rem;margin-left:auto}
+.ratio-cell{padding:.7rem 1rem;text-align:center;border-bottom:1px solid var(--border);color:var(--text)}
+.zone-pill{display:inline-block;padding:.15rem .6rem;border-radius:.35rem;font-size:.75rem;font-weight:700;min-width:44px;text-align:center}
 </style>
 {% endblock %}
 
-{% block scripts %}
-const ZONE_RISK_FACTOR = {
-    "III": 0.50,
-    "IIb": 0.30,
-    "IIa": 0.15,
-    "I": 0.05,
-    "0": 0.00,
-    "Inconnue": 0.15 // Default to IIa
-};
+{% block content %}
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="diagnostic">&#x1F9EA; Portfolio Diagnostic</button>
+  <button class="tab-btn" data-tab="pml">&#x26A1; PML Simulator</button>
+</div>
 
-let gridApi;
-let vulnChartInstance = null;
+<!-- TAB 1: DIAGNOSTIC -->
+<div class="tab-pane active" id="tab-diagnostic">
+  <section class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi-card" style="border-left:4px solid var(--accent)">
+      <div class="kpi-content">
+        <div class="kpi-label">Overall Health Score</div>
+        <div class="kpi-value" id="healthScore">&#x2014;</div>
+        <div class="kpi-label" style="font-size:.75rem" id="healthStatus">Evaluating...</div>
+      </div>
+    </div>
+    <div class="kpi-card" style="border-left:4px solid #facc15">
+      <div class="kpi-content">
+        <div class="kpi-label">High-Risk Exposure (Zone III &amp; IIb)</div>
+        <div class="kpi-value" id="highRiskExposure">&#x2014;</div>
+        <div class="kpi-label" style="font-size:.75rem">% of Total Capital</div>
+      </div>
+    </div>
+    <div class="kpi-card" style="border-left:4px solid #f87171">
+      <div class="kpi-content">
+        <div class="kpi-label">Portfolio MPL Baseline</div>
+        <div class="kpi-value" id="mplBaseline">&#x2014;</div>
+        <div class="kpi-label" style="font-size:.75rem">Standard RPA damage ratios</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="charts-grid" style="margin-top:1.5rem;grid-template-columns:1fr 1fr">
+    <div class="chart-card">
+      <div class="chart-card-header"><h2>Portfolio Vulnerability Distribution</h2></div>
+      <div class="chart-wrap donut-wrap" style="height:250px"><canvas id="vulnChart"></canvas></div>
+      <div class="custom-legend" style="display:flex;justify-content:center;gap:1.5rem;margin-top:1rem">
+        <div class="legend-item"><span class="legend-dot" style="background:#f87171"></span>Critical</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#facc15"></span>Warning</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>Safe</div>
+      </div>
+    </div>
+    <div class="chart-card" style="display:flex;flex-direction:column">
+      <div class="chart-card-header"><h2>Strategic Recommendations</h2></div>
+      <div id="recommendationsList" style="flex:1;overflow-y:auto;padding-right:.5rem;display:flex;flex-direction:column;gap:1rem;margin-top:1rem">
+        <div id="insightsPlaceholder" style="color:var(--muted);text-align:center;margin-top:2rem">Generating insights...</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="charts-grid" style="margin-top:1.5rem;grid-template-columns:1fr">
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <h2>Wilaya Vulnerability Index</h2>
+        <p style="font-size:.85rem;color:#94a3b8;margin-top:.5rem">Vulnerability = Capital Insured x Zone Risk Factor. Sorted by most vulnerable.</p>
+      </div>
+      <div id="diagGrid" class="ag-theme-alpine-dark" style="height:400px;width:100%;border-radius:.5rem;margin-top:1rem"></div>
+    </div>
+  </section>
+</div>
+
+<!-- TAB 2: PML SIMULATOR -->
+<div class="tab-pane" id="tab-pml">
+  <div class="scenario-bar">
+    <span style="font-size:.85rem;color:var(--muted);font-weight:500">Seismic scenario:</span>
+    <div class="scenario-tabs">
+      <button class="scenario-btn active" data-scenario="conservative">&#x1F7E2; Conservative <span class="scenario-sub">x0.7</span></button>
+      <button class="scenario-btn" data-scenario="standard">&#x1F7E1; Standard RPA <span class="scenario-sub">x1.0</span></button>
+      <button class="scenario-btn" data-scenario="severe">&#x1F534; Severe <span class="scenario-sub">x1.4</span></button>
+    </div>
+    <div class="status-badge" id="pmlStatus">Loading...</div>
+  </div>
+
+  <section class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi-card" style="border-left:4px solid var(--accent)">
+      <div class="kpi-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
+      <div><div class="kpi-value" id="kpiTotalCapital">&#x2014;</div><div class="kpi-label">Total Insured Capital</div></div>
+    </div>
+    <div class="kpi-card" style="border-left:4px solid #f87171">
+      <div class="kpi-icon" style="background:rgba(248,113,113,.1);color:#f87171"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+      <div><div class="kpi-value" id="kpiTotalPml">&#x2014;</div><div class="kpi-label">Estimated PML (DZD)</div></div>
+    </div>
+    <div class="kpi-card" style="border-left:4px solid #facc15">
+      <div class="kpi-icon" style="background:rgba(250,204,21,.1);color:#facc15"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+      <div><div class="kpi-value" id="kpiPmlRatio">&#x2014;</div><div class="kpi-label">PML Loss Ratio</div></div>
+    </div>
+    <div class="kpi-card" style="border-left:4px solid #a78bfa">
+      <div class="kpi-icon" style="background:rgba(167,139,250,.1);color:#a78bfa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg></div>
+      <div><div class="kpi-value" id="kpiWilayaCount">&#x2014;</div><div class="kpi-label">Wilayas Analysed</div></div>
+    </div>
+  </section>
+
+  <section class="charts-grid" style="margin-top:1.25rem;grid-template-columns:1fr 1.6fr">
+    <div class="chart-card">
+      <div class="chart-card-header"><h2>PML by RPA Zone</h2><span class="chart-badge" id="scenarioBadge">Standard</span></div>
+      <div class="chart-wrap donut-wrap" style="height:240px"><canvas id="pmlZoneChart"></canvas></div>
+      <div class="custom-legend" id="zoneLegend" style="margin-top:1rem"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-header"><h2>Top 10 Wilayas - Estimated PML</h2></div>
+      <div class="chart-wrap" style="height:280px"><canvas id="pmlWilayaChart"></canvas></div>
+    </div>
+  </section>
+
+  <section class="charts-grid" style="margin-top:1.25rem;grid-template-columns:1fr">
+    <div class="chart-card">
+      <div class="chart-card-header"><h2>Applied Damage Ratios (RPA 99/2003)</h2><span class="chart-badge" id="multBadge">x1.0</span></div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem;margin-top:.75rem">
+          <thead><tr>
+            <th style="padding:.6rem 1rem;text-align:left;color:var(--muted);font-size:.72rem;text-transform:uppercase;background:var(--surface2)">RPA Zone</th>
+            <th style="padding:.6rem 1rem;text-align:center;background:var(--surface2);color:var(--muted);font-size:.72rem;text-transform:uppercase">Residential</th>
+            <th style="padding:.6rem 1rem;text-align:center;background:var(--surface2);color:var(--muted);font-size:.72rem;text-transform:uppercase">Commercial</th>
+            <th style="padding:.6rem 1rem;text-align:center;background:var(--surface2);color:var(--muted);font-size:.72rem;text-transform:uppercase">Industrial</th>
+            <th style="padding:.6rem 1rem;text-align:center;background:var(--surface2);color:var(--muted);font-size:.72rem;text-transform:uppercase">Other</th>
+          </tr></thead>
+          <tbody id="ratioTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'pml' && !pmlLoaded) { loadPML(); pmlLoaded = true; }
+  });
+});
+
+// DIAGNOSTIC
+const ZONE_RISK_FACTOR = { 'III':0.50,'IIb':0.30,'IIa':0.15,'I':0.05,'0':0.00,'Inconnue':0.15 };
+let diagGridApi, vulnChartInstance = null;
 
 async function loadDiagnosticData() {
-    const list = document.getElementById('recommendationsList');
-    const placeholder = document.getElementById('insightsPlaceholder');
-    try {
-        const res = await fetch(`/api/by-wilaya-map?dataset_id=${currentDatasetId}`);
-        if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
-        const data = await res.json();
-
-        if (!Array.isArray(data) || data.length === 0) {
-            if (placeholder) placeholder.textContent = 'No wilaya data available for this dataset.';
-            return;
-        }
-
-        let totalCapital = 0;
-        let highRiskCapital = 0;
-        let totalMpl = 0;
-
-        // Process data to calculate vulnerability
-        const processedData = data.map(d => {
-            const zone = d.zone_rpa || "Inconnue";
-            const factor = ZONE_RISK_FACTOR[zone] ?? 0.15;
-            const vulnScore = (d.total_capital || 0) * factor;
-
-            totalCapital += (d.total_capital || 0);
-            if (zone === 'III' || zone === 'IIb') {
-                highRiskCapital += (d.total_capital || 0);
-            }
-            totalMpl += vulnScore;
-
-            let status = "Safe";
-            if (zone === 'III' || vulnScore > 500000000) status = "Critical";
-            else if (zone === 'IIb' || vulnScore > 100000000) status = "Warning";
-
-            return { ...d, vulnScore, status };
-        });
-
-        // Calculate KPIs
-        const highRiskPct = totalCapital > 0 ? (highRiskCapital / totalCapital) * 100 : 0;
-        document.getElementById('highRiskExposure').textContent = highRiskPct.toFixed(1) + '%';
-        document.getElementById('mplBaseline').textContent = fmtB(totalMpl) + ' DZD';
-
-        let healthScore = Math.max(0, 100 - (highRiskPct * 0.8));
-        document.getElementById('healthScore').textContent = healthScore.toFixed(0) + '/100';
-
-        const healthStatusEl = document.getElementById('healthStatus');
-        if (healthScore > 75) { healthStatusEl.textContent = "Good Balance"; healthStatusEl.style.color = "#4ade80"; }
-        else if (healthScore > 50) { healthStatusEl.textContent = "Moderate Risk"; healthStatusEl.style.color = "#facc15"; }
-        else { healthStatusEl.textContent = "High Concentration Risk"; healthStatusEl.style.color = "#f87171"; }
-
-        // Render chart
-        const statusCounts = { "Critical": 0, "Warning": 0, "Safe": 0 };
-        processedData.forEach(d => {
-            if (d.status === 'Critical') statusCounts['Critical'] += d.total_capital;
-            else if (d.status === 'Warning') statusCounts['Warning'] += d.total_capital;
-            else statusCounts['Safe'] += d.total_capital;
-        });
-        renderVulnChart(statusCounts);
-
-        // Generate Recommendations
-        generateRecommendations(processedData, highRiskPct, totalCapital);
-
-        // Render Grid
-        renderGrid(processedData);
-
-    } catch (err) {
-        console.error('Diagnostic load error:', err);
-        if (list) list.innerHTML = `<div class="rec-card danger"><div class="rec-title">Failed to load diagnostic data</div><div class="rec-desc">${err.message}</div></div>`;
+  try {
+    const res = await fetch('/api/by-wilaya-map?dataset_id=' + currentDatasetId);
+    if (!res.ok) throw new Error('API error: ' + res.status);
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) {
+      document.getElementById('insightsPlaceholder').textContent = 'No data available.'; return;
     }
+    let totalCapital=0, highRiskCapital=0, totalMpl=0;
+    const processed = data.map(d => {
+      const zone = d.zone_rpa || 'Inconnue';
+      const factor = ZONE_RISK_FACTOR[zone] ?? 0.15;
+      const vulnScore = (d.total_capital||0) * factor;
+      totalCapital += (d.total_capital||0);
+      if (zone==='III'||zone==='IIb') highRiskCapital += (d.total_capital||0);
+      totalMpl += vulnScore;
+      let status = 'Safe';
+      if (zone==='III'||vulnScore>500000000) status='Critical';
+      else if (zone==='IIb'||vulnScore>100000000) status='Warning';
+      return {...d, vulnScore, status};
+    });
+    const highRiskPct = totalCapital > 0 ? (highRiskCapital/totalCapital)*100 : 0;
+    document.getElementById('highRiskExposure').textContent = highRiskPct.toFixed(1) + '%';
+    document.getElementById('mplBaseline').textContent = fmtB(totalMpl) + ' DZD';
+    const hs = Math.max(0, 100 - highRiskPct*0.8);
+    document.getElementById('healthScore').textContent = hs.toFixed(0) + '/100';
+    const hsEl = document.getElementById('healthStatus');
+    if (hs>75){hsEl.textContent='Good Balance';hsEl.style.color='#4ade80';}
+    else if(hs>50){hsEl.textContent='Moderate Risk';hsEl.style.color='#facc15';}
+    else{hsEl.textContent='High Concentration Risk';hsEl.style.color='#f87171';}
+    const counts={Critical:0,Warning:0,Safe:0};
+    processed.forEach(d => { counts[d.status]+=(d.total_capital||0); });
+    renderVulnChart(counts);
+    generateRecommendations(processed, highRiskPct, totalCapital);
+    renderDiagGrid(processed);
+  } catch(err) {
+    console.error(err);
+    document.getElementById('recommendationsList').innerHTML = '<div class="rec-card danger"><div class="rec-title">Error loading data</div><div class="rec-desc">'+err.message+'</div></div>';
+  }
 }
 
 function renderVulnChart(counts) {
-    const ctx = document.getElementById('vulnChart');
-    if (vulnChartInstance) vulnChartInstance.destroy();
-
-    vulnChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Critical', 'Warning', 'Safe'],
-            datasets: [{
-                data: [counts['Critical'], counts['Warning'], counts['Safe']],
-                backgroundColor: ['#f87171', '#facc15', '#4ade80'],
-                borderWidth: 2,
-                borderColor: '#0b2118'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: { legend: { display: false } }
-        }
-    });
+  const ctx = document.getElementById('vulnChart');
+  if (vulnChartInstance) vulnChartInstance.destroy();
+  vulnChartInstance = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels:['Critical','Warning','Safe'], datasets:[{ data:[counts.Critical,counts.Warning,counts.Safe], backgroundColor:['#f87171','#facc15','#4ade80'], borderWidth:2, borderColor:'#0b2118' }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'70%', plugins:{legend:{display:false}} }
+  });
 }
 
 function generateRecommendations(data, highRiskPct, totalCapital) {
-    const list = document.getElementById('recommendationsList');
-    let html = '';
-    
-    // 1. Overall Balance Rule
-    if (highRiskPct > 60) {
-        html += `<div class="rec-card danger">
-            <div class="rec-title">Over-concentration in High-Risk Zones</div>
-            <div class="rec-desc"><b>${highRiskPct.toFixed(1)}%</b> of your capital is exposed in Zone III and IIb. Consider increasing premiums or reducing underwriting capacity in these zones to balance the portfolio.</div>
-        </div>`;
-    } else if (highRiskPct < 30) {
-        html += `<div class="rec-card success">
-            <div class="rec-title">Healthy Portfolio Balance</div>
-            <div class="rec-desc">High-risk exposure is kept at <b>${highRiskPct.toFixed(1)}%</b>, which is well within safe margins. You have capacity to underwrite more profitable risks in Zone IIa and I.</div>
-        </div>`;
-    } else {
-        html += `<div class="rec-card warning">
-            <div class="rec-title">Moderate Concentration Risk</div>
-            <div class="rec-desc">Your portfolio has a standard distribution, but keep an eye on accumulation in specific wilayas.</div>
-        </div>`;
-    }
-    
-    // 2. Identify Top Critical Wilaya
-    const critical = [...data].filter(d => d.status === 'Critical').sort((a,b) => b.vulnScore - a.vulnScore);
-    if (critical.length > 0) {
-        const top = critical[0];
-        const pct = ((top.total_capital / totalCapital) * 100).toFixed(1);
-        html += `<div class="rec-card danger">
-            <div class="rec-title">Urgent Action: ${top.wilaya}</div>
-            <div class="rec-desc">This single wilaya represents <b>${pct}%</b> of your total portfolio capital while being in RPA <b>Zone ${top.zone_rpa}</b>. Evaluate purchasing specific proportional reinsurance treaties for this area.</div>
-        </div>`;
-    }
-    
-    // 3. Identify Opportunity
-    const safe = [...data].filter(d => d.status === 'Safe' && d.total_premium > 0).sort((a,b) => b.total_premium - a.total_premium);
-    if (safe.length > 0) {
-        const op = safe[0];
-        html += `<div class="rec-card info">
-            <div class="rec-title">Growth Opportunity: ${op.wilaya}</div>
-            <div class="rec-desc">This wilaya is in a low-risk zone (Zone ${op.zone_rpa}) and generates good premium. Target marketing efforts here to improve the overall portfolio equilibrium.</div>
-        </div>`;
-    }
-    
-    list.innerHTML = html;
+  const list = document.getElementById('recommendationsList');
+  let html = '';
+  if (highRiskPct>60) html += '<div class="rec-card danger"><div class="rec-title">Over-concentration in High-Risk Zones</div><div class="rec-desc"><b>'+highRiskPct.toFixed(1)+'%</b> of capital is in Zone III/IIb. Consider increasing premiums or reducing underwriting capacity.</div></div>';
+  else if (highRiskPct<30) html += '<div class="rec-card success"><div class="rec-title">Healthy Portfolio Balance</div><div class="rec-desc">High-risk exposure at <b>'+highRiskPct.toFixed(1)+'%</b> — well within safe margins.</div></div>';
+  else html += '<div class="rec-card warning"><div class="rec-title">Moderate Concentration Risk</div><div class="rec-desc">Standard distribution — monitor accumulation in specific wilayas.</div></div>';
+  const critical = [...data].filter(d=>d.status==='Critical').sort((a,b)=>b.vulnScore-a.vulnScore);
+  if (critical.length) {
+    const t=critical[0]; const pct=((t.total_capital/totalCapital)*100).toFixed(1);
+    html+='<div class="rec-card danger"><div class="rec-title">Urgent Action: '+t.wilaya+'</div><div class="rec-desc">Represents <b>'+pct+'%</b> of total portfolio in RPA Zone <b>'+t.zone_rpa+'</b>. Evaluate specific reinsurance treaties.</div></div>';
+  }
+  const safe=[...data].filter(d=>d.status==='Safe'&&d.total_premium>0).sort((a,b)=>b.total_premium-a.total_premium);
+  if (safe.length) {
+    const o=safe[0];
+    html+='<div class="rec-card info"><div class="rec-title">Growth Opportunity: '+o.wilaya+'</div><div class="rec-desc">Low-risk zone (Zone '+o.zone_rpa+') generating good premium. Target marketing here to improve portfolio balance.</div></div>';
+  }
+  list.innerHTML = html;
 }
 
-function renderGrid(rowData) {
-    if (gridApi) gridApi.destroy();
-    
-    const gridOptions = {
-        rowData: rowData,
-        columnDefs: [
-            { field: 'wilaya', headerName: 'Wilaya', sortable: true, filter: true, flex: 2 },
-            { field: 'zone_rpa', headerName: 'Zone RPA', sortable: true, filter: true, width: 120 },
-            { 
-                field: 'total_capital', 
-                headerName: 'Capital Exposé (DZD)', 
-                sortable: true, 
-                flex: 2,
-                valueFormatter: params => fmt(params.value)
-            },
-            { 
-                field: 'vulnScore', 
-                headerName: 'Vulnerability Score', 
-                sortable: true, 
-                flex: 2,
-                valueFormatter: params => fmt(params.value)
-            },
-            { 
-                field: 'status', 
-                headerName: 'Diagnostic', 
-                sortable: true, 
-                width: 130,
-                cellRenderer: params => {
-                    const s = params.value;
-                    const cls = `vuln-${s.toLowerCase()}`;
-                    return `<span class="vuln-badge ${cls}">${s}</span>`;
-                }
-            }
-        ],
-        defaultColDef: { resizable: true },
-        pagination: true,
-        paginationPageSize: 15,
-        animateRows: true
-    };
-    
-    const gridDiv = document.querySelector('#diagGrid');
-    gridApi = agGrid.createGrid(gridDiv, gridOptions);
-    gridApi.applyColumnState({
-        state: [{ colId: 'vulnScore', sort: 'desc' }],
-        defaultState: { sort: null }
-    });
+function renderDiagGrid(rowData) {
+  if (diagGridApi) diagGridApi.destroy();
+  diagGridApi = agGrid.createGrid(document.getElementById('diagGrid'), {
+    rowData,
+    columnDefs:[
+      {field:'wilaya',headerName:'Wilaya',sortable:true,filter:true,flex:2},
+      {field:'zone_rpa',headerName:'Zone RPA',sortable:true,filter:true,width:120},
+      {field:'total_capital',headerName:'Capital Exposed (DZD)',sortable:true,flex:2,valueFormatter:p=>fmt(p.value)},
+      {field:'vulnScore',headerName:'Vulnerability Score',sortable:true,flex:2,valueFormatter:p=>fmt(p.value)},
+      {field:'status',headerName:'Diagnostic',sortable:true,width:130}
+    ],
+    defaultColDef:{resizable:true},
+    pagination:true, paginationPageSize:15, animateRows:true
+  });
+  diagGridApi.applyColumnState({state:[{colId:'vulnScore',sort:'desc'}],defaultState:{sort:null}});
+}
+
+// PML SIMULATOR
+const ZONE_COLORS={'0':'#4ade80','I':'#BBCA14','IIa':'#facc15','IIb':'#fb923c','III':'#f87171','Inconnue':'#94a3b8'};
+const ZONE_PILL={'0':'background:rgba(74,222,128,.15);color:#4ade80','I':'background:rgba(187,202,20,.15);color:#BBCA14','IIa':'background:rgba(250,204,21,.15);color:#facc15','IIb':'background:rgba(251,146,60,.15);color:#fb923c','III':'background:rgba(248,113,113,.15);color:#f87171','Inconnue':'background:rgba(148,163,184,.15);color:#94a3b8'};
+let pmlZoneChart=null, pmlWilayaChart=null, currentScenario='conservative', pmlLoaded=false;
+
+document.querySelectorAll('.scenario-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.scenario-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentScenario = btn.dataset.scenario;
+    loadPML();
+  });
+});
+
+async function loadPML() {
+  document.getElementById('pmlStatus').textContent = 'Computing...';
+  try {
+    const res = await fetch('/api/pml-simulation?dataset_id='+currentDatasetId+'&scenario='+currentScenario);
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    document.getElementById('kpiTotalCapital').textContent = fmtB(d.total_capital)+' DZD';
+    document.getElementById('kpiTotalPml').textContent = fmtB(d.total_pml)+' DZD';
+    document.getElementById('kpiPmlRatio').textContent = (d.pml_ratio*100).toFixed(1)+'%';
+    document.getElementById('kpiWilayaCount').textContent = fmt(d.by_wilaya.length);
+    renderZoneChart(d.by_zone);
+    renderWilayaChart(d.by_wilaya.slice(0,10));
+    renderRatioTable(d.damage_ratios, d.multiplier);
+    const lbl={conservative:'Conservative',standard:'Standard RPA',severe:'Severe'};
+    document.getElementById('scenarioBadge').textContent = lbl[d.scenario]||d.scenario;
+    document.getElementById('multBadge').textContent = 'x'+d.multiplier.toFixed(1);
+    document.getElementById('pmlStatus').textContent = 'Updated '+new Date().toLocaleTimeString('en-GB');
+  } catch(err) {
+    document.getElementById('pmlStatus').textContent = 'Error: '+err.message;
+  }
+}
+
+function renderZoneChart(byZone) {
+  const ctx = document.getElementById('pmlZoneChart');
+  if (pmlZoneChart) pmlZoneChart.destroy();
+  const total = byZone.reduce((a,z)=>a+z.pml,0);
+  pmlZoneChart = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels:byZone.map(z=>'Zone '+z.zone),datasets:[{data:byZone.map(z=>z.pml),backgroundColor:byZone.map(z=>ZONE_COLORS[z.zone]||'#94a3b8'),borderWidth:2,borderColor:'#0b2118'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmtB(c.raw)+' DZD ('+(c.raw/total*100).toFixed(1)+'%)'}}}}
+  });
+  document.getElementById('zoneLegend').innerHTML = byZone.map(z=>
+    '<div class="legend-item"><span class="legend-dot" style="background:'+(ZONE_COLORS[z.zone]||'#94a3b8')+'"></span><span class="legend-label">Zone '+z.zone+'</span><span class="legend-pct">'+(z.pml/total*100).toFixed(1)+'%</span></div>'
+  ).join('');
+}
+
+function renderWilayaChart(top10) {
+  const ctx = document.getElementById('pmlWilayaChart');
+  if (pmlWilayaChart) pmlWilayaChart.destroy();
+  pmlWilayaChart = new Chart(ctx, {
+    type:'bar',
+    data:{labels:top10.map(w=>w.wilaya),datasets:[{label:'Estimated PML (DZD)',data:top10.map(w=>w.pml),backgroundColor:top10.map(w=>ZONE_COLORS[w.zone]||'#94a3b8'),borderRadius:5,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmtB(c.raw)+' DZD'}}},scales:{x:{ticks:{callback:v=>fmtB(v)},grid:{color:'rgba(255,255,255,.05)'}},y:{grid:{display:false}}}}
+  });
+}
+
+function renderRatioTable(ratios, mult) {
+  document.getElementById('ratioTableBody').innerHTML = ['0','I','IIa','IIb','III','Inconnue'].filter(z=>ratios[z]).map(z=>{
+    const r=ratios[z]; const adj=v=>(Math.min(v*mult,1.0)*100).toFixed(0)+'%';
+    return '<tr><td class="ratio-cell" style="text-align:left"><span class="zone-pill" style="'+(ZONE_PILL[z]||'')+'">Zone '+z+'</span></td><td class="ratio-cell">'+adj(r.immobilier)+'</td><td class="ratio-cell">'+adj(r.commercial)+'</td><td class="ratio-cell">'+adj(r.industriel)+'</td><td class="ratio-cell">'+adj(r.default)+'</td></tr>';
+  }).join('');
 }
 
 loadDiagnosticData().catch(err => {
-    console.error('Unhandled diagnostic error:', err);
-    const list = document.getElementById('recommendationsList');
-    if (list) list.innerHTML = `<div class="rec-card danger"><div class="rec-title">Unexpected Error</div><div class="rec-desc">${err.message}</div></div>`;
+  document.getElementById('recommendationsList').innerHTML = '<div class="rec-card danger"><div class="rec-title">Unexpected Error</div><div class="rec-desc">'+err.message+'</div></div>';
 });
 {% endblock %}

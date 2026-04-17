@@ -349,12 +349,7 @@ function renderGrid(rowData, totalCapital, threshold) {
                 headerName: 'Zone RPA', 
                 sortable: true, 
                 filter: true, 
-                width: 120,
-                cellRenderer: params => {
-                    const z = params.value || "Inconnue";
-                    const cls = `zone-${z}`;
-                    return `<span class="zone-badge ${cls}">${z}</span>`;
-                }
+                width: 120
             },
             { 
                 field: 'total_capital', 

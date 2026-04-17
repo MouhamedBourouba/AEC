@@ -1,0 +1,338 @@
+{% extends 'dashboard_base.html' %}
+{% block page_title %}PML Simulator{% endblock %}
+{% block page_subtitle %}Probable Maximum Loss — Seismic scenario simulation across the insurance portfolio{% endblock %}
+
+{% block content %}
+
+<!-- ── Scenario Selector ──────────────────────────────────────────────────── -->
+<div class="pml-scenario-bar">
+    <div class="scenario-label">Seismic scenario:</div>
+    <div class="scenario-tabs">
+        <button class="scenario-btn active" data-scenario="conservative">
+            🟢 Conservative <span class="scenario-sub">×0.7</span>
+        </button>
+        <button class="scenario-btn" data-scenario="standard">
+            🟡 Standard RPA <span class="scenario-sub">×1.0</span>
+        </button>
+        <button class="scenario-btn" data-scenario="severe">
+            🔴 Severe <span class="scenario-sub">×1.4</span>
+        </button>
+    </div>
+    <div class="pml-loading-badge" id="pmlStatus">Loading…</div>
+</div>
+
+<!-- ── KPI Row ────────────────────────────────────────────────────────────── -->
+<section class="kpi-grid" style="grid-template-columns: repeat(4,1fr); margin-top:1.25rem;">
+
+    <div class="kpi-card" style="border-left:4px solid var(--accent);">
+        <div class="kpi-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        </div>
+        <div>
+            <div class="kpi-value" id="kpiTotalCapital">—</div>
+            <div class="kpi-label">Total Insured Capital</div>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left:4px solid #f87171;">
+        <div class="kpi-icon" style="background:rgba(248,113,113,0.1);color:#f87171;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div>
+            <div class="kpi-value" id="kpiTotalPml">—</div>
+            <div class="kpi-label">Estimated PML (DZD)</div>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left:4px solid #facc15;">
+        <div class="kpi-icon" style="background:rgba(250,204,21,0.1);color:#facc15;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <div>
+            <div class="kpi-value" id="kpiPmlRatio">—</div>
+            <div class="kpi-label">PML Loss Ratio</div>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left:4px solid #a78bfa;">
+        <div class="kpi-icon" style="background:rgba(167,139,250,0.1);color:#a78bfa;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div>
+            <div class="kpi-value" id="kpiWilayaCount">—</div>
+            <div class="kpi-label">Wilayas Analysed</div>
+        </div>
+    </div>
+
+</section>
+
+<!-- ── Charts Row ─────────────────────────────────────────────────────────── -->
+<section class="charts-grid" style="margin-top:1.25rem; grid-template-columns: 1fr 1.6fr;">
+
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>PML by RPA Zone</h2>
+            <span class="chart-badge" id="scenarioBadge">Standard</span>
+        </div>
+        <div class="chart-wrap donut-wrap" style="height:240px;">
+            <canvas id="pmlZoneChart"></canvas>
+        </div>
+        <div class="custom-legend" id="zoneLegend" style="margin-top:1rem;"></div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>Top 10 Wilayas — Estimated PML</h2>
+        </div>
+        <div class="chart-wrap" style="height:280px;">
+            <canvas id="pmlWilayaChart"></canvas>
+        </div>
+    </div>
+
+</section>
+
+<!-- ── Damage Ratios Reference ────────────────────────────────────────────── -->
+<section class="charts-grid" style="margin-top:1.25rem; grid-template-columns:1fr;">
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>Applied Damage Ratios (RPA 99/2003)</h2>
+            <span class="chart-badge" id="multBadge">×1.0</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:0.75rem;">
+                <thead>
+                    <tr>
+                        <th style="padding:0.6rem 1rem; text-align:left; color:var(--muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; background:var(--surface2);">RPA Zone</th>
+                        <th style="padding:0.6rem 1rem; text-align:center; background:var(--surface2); color:var(--muted); font-size:0.72rem; text-transform:uppercase;">Residential</th>
+                        <th style="padding:0.6rem 1rem; text-align:center; background:var(--surface2); color:var(--muted); font-size:0.72rem; text-transform:uppercase;">Commercial</th>
+                        <th style="padding:0.6rem 1rem; text-align:center; background:var(--surface2); color:var(--muted); font-size:0.72rem; text-transform:uppercase;">Industrial</th>
+                        <th style="padding:0.6rem 1rem; text-align:center; background:var(--surface2); color:var(--muted); font-size:0.72rem; text-transform:uppercase;">Other</th>
+                    </tr>
+                </thead>
+                <tbody id="ratioTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<style>
+.pml-scenario-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.scenario-label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 500;
+    white-space: nowrap;
+}
+.scenario-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    padding: 0.3rem;
+}
+.scenario-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    padding: 0.45rem 1rem;
+    border-radius: 0.45rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.scenario-btn.active {
+    background: rgba(187,202,20,0.15);
+    color: var(--text);
+}
+.scenario-btn:hover:not(.active) {
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+}
+.scenario-sub {
+    font-size: 0.72rem;
+    opacity: 0.7;
+}
+.pml-loading-badge {
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.75rem;
+    border-radius: 2rem;
+    margin-left: auto;
+}
+.ratio-cell {
+    padding: 0.7rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+}
+.zone-pill {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 44px;
+    text-align: center;
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+const ZONE_COLORS = {
+    '0':       '#4ade80',
+    'I':       '#BBCA14',
+    'IIa':     '#facc15',
+    'IIb':     '#fb923c',
+    'III':     '#f87171',
+    'Inconnue':'#94a3b8'
+};
+const ZONE_PILL_STYLES = {
+    '0':       'background:rgba(74,222,128,0.15);color:#4ade80;',
+    'I':       'background:rgba(187,202,20,0.15);color:#BBCA14;',
+    'IIa':     'background:rgba(250,204,21,0.15);color:#facc15;',
+    'IIb':     'background:rgba(251,146,60,0.15);color:#fb923c;',
+    'III':     'background:rgba(248,113,113,0.15);color:#f87171;',
+    'Inconnue':'background:rgba(148,163,184,0.15);color:#94a3b8;'
+};
+
+let pmlZoneChart   = null;
+let pmlWilayaChart = null;
+let currentScenario = 'conservative';
+
+document.querySelectorAll('.scenario-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentScenario = btn.dataset.scenario;
+        loadPML();
+    });
+});
+
+async function loadPML() {
+    document.getElementById('pmlStatus').textContent = 'Computing…';
+    try {
+        const res = await fetch(`/api/pml-simulation?dataset_id=${currentDatasetId}&scenario=${currentScenario}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json();
+        if (d.error) throw new Error(d.error);
+
+        renderKPIs(d);
+        renderZoneChart(d.by_zone);
+        renderWilayaChart(d.by_wilaya.slice(0, 10));
+        renderRatioTable(d.damage_ratios, d.multiplier);
+
+        const labels = { conservative: 'Conservative', standard: 'Standard RPA', severe: 'Severe' };
+        document.getElementById('scenarioBadge').textContent = labels[d.scenario] || d.scenario;
+        document.getElementById('multBadge').textContent = `×${d.multiplier.toFixed(1)}`;
+        document.getElementById('pmlStatus').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB');
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById('pmlStatus').textContent = '⚠ ' + err.message;
+    }
+}
+
+function renderKPIs(d) {
+    document.getElementById('kpiTotalCapital').textContent = fmtB(d.total_capital) + ' DZD';
+    document.getElementById('kpiTotalPml').textContent     = fmtB(d.total_pml)     + ' DZD';
+    document.getElementById('kpiPmlRatio').textContent     = (d.pml_ratio * 100).toFixed(1) + '%';
+    document.getElementById('kpiWilayaCount').textContent  = fmt(d.by_wilaya.length);
+}
+
+function renderZoneChart(byZone) {
+    const ctx = document.getElementById('pmlZoneChart');
+    if (pmlZoneChart) pmlZoneChart.destroy();
+
+    const total  = byZone.reduce((a, z) => a + z.pml, 0);
+    const colors = byZone.map(z => ZONE_COLORS[z.zone] || '#94a3b8');
+
+    pmlZoneChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: byZone.map(z => `Zone ${z.zone}`),
+            datasets: [{ data: byZone.map(z => z.pml), backgroundColor: colors, borderWidth: 2, borderColor: '#0b2118' }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '68%',
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: c => ` ${fmtB(c.raw)} DZD (${((c.raw/total)*100).toFixed(1)}%)` } }
+            }
+        }
+    });
+
+    const legend = document.getElementById('zoneLegend');
+    legend.innerHTML = byZone.map(z => `
+        <div class="legend-item">
+            <span class="legend-dot" style="background:${ZONE_COLORS[z.zone]||'#94a3b8'}"></span>
+            <span class="legend-label">Zone ${z.zone}</span>
+            <span class="legend-pct">${((z.pml/total)*100).toFixed(1)}%</span>
+        </div>`).join('');
+}
+
+function renderWilayaChart(top10) {
+    const ctx = document.getElementById('pmlWilayaChart');
+    if (pmlWilayaChart) pmlWilayaChart.destroy();
+
+    pmlWilayaChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: top10.map(w => w.wilaya),
+            datasets: [{
+                label: 'Estimated PML (DZD)',
+                data: top10.map(w => w.pml),
+                backgroundColor: top10.map(w => ZONE_COLORS[w.zone] || '#94a3b8'),
+                borderRadius: 5,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: c => ` ${fmtB(c.raw)} DZD` } }
+            },
+            scales: {
+                x: { ticks: { callback: v => fmtB(v) }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderRatioTable(ratios, mult) {
+    const zoneOrder = ['0','I','IIa','IIb','III','Inconnue'];
+    const body = document.getElementById('ratioTableBody');
+    body.innerHTML = zoneOrder.filter(z => ratios[z]).map(z => {
+        const r   = ratios[z];
+        const adj = v => (Math.min(v * mult, 1.0) * 100).toFixed(0) + '%';
+        return `<tr>
+            <td class="ratio-cell" style="text-align:left;">
+                <span class="zone-pill" style="${ZONE_PILL_STYLES[z]||''}">Zone ${z}</span>
+            </td>
+            <td class="ratio-cell">${adj(r.immobilier)}</td>
+            <td class="ratio-cell">${adj(r.commercial)}</td>
+            <td class="ratio-cell">${adj(r.industriel)}</td>
+            <td class="ratio-cell">${adj(r.default)}</td>
+        </tr>`;
+    }).join('');
+}
+
+loadPML();
+{% endblock %}

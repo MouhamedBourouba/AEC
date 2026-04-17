@@ -238,3 +238,10 @@ def datatable():
     redir, dataset, all_datasets = get_dashboard_context('views.datatable')
     if redir: return redir
     return render_template('datatable.html', dataset=dataset, all_datasets=all_datasets, active_page='datatable')
+
+@views_bp.route('/dashboard/pml')
+def pml_simulator():
+    # PML is now merged into the Risk Analysis (diagnostic) page
+    from flask import redirect
+    ds_id = request.args.get('dataset_id')
+    return redirect(url_for('views.diagnostic', dataset_id=ds_id))
