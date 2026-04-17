@@ -3,6 +3,7 @@
 {% block page_subtitle %}Portfolio diagnostic and PML simulation — RPA seismic classification{% endblock %}
 
 {% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 .tab-bar{display:flex;gap:.5rem;background:var(--surface);border:1px solid var(--border);border-radius:.65rem;padding:.3rem;width:fit-content;margin-bottom:1.5rem}
 .tab-btn{background:none;border:none;color:var(--muted);padding:.45rem 1.2rem;border-radius:.45rem;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:.2s}
@@ -32,9 +33,15 @@
 {% endblock %}
 
 {% block content %}
-<div class="tab-bar">
-  <button class="tab-btn active" data-tab="diagnostic">&#x1F9EA; Portfolio Diagnostic</button>
-  <button class="tab-btn" data-tab="pml">&#x26A1; PML Simulator</button>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+  <div class="tab-bar" style="margin-bottom: 0;">
+    <button class="tab-btn active" data-tab="diagnostic">&#x1F9EA; Portfolio Diagnostic</button>
+    <button class="tab-btn" data-tab="pml">&#x1F30D; Earthquake Simulator</button>
+  </div>
+  <button id="exportPdfBtn" style="background: var(--accent); color: #111827; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+    Export Report
+  </button>
 </div>
 
 <!-- TAB 1: DIAGNOSTIC -->
@@ -102,6 +109,11 @@
       <button class="scenario-btn" data-scenario="severe">&#x1F534; Severe <span class="scenario-sub">x1.4</span></button>
     </div>
     <div class="status-badge" id="pmlStatus">Loading...</div>
+    
+    <div style="margin-left:auto; display:flex; align-items:center; gap:0.5rem; background:var(--surface2); padding:0.3rem 0.5rem; border-radius:0.5rem; border:1px solid var(--border);">
+      <label for="retentionInput" style="font-size:.75rem;color:var(--muted)">Retention Capacity (DZD):</label>
+      <input type="number" id="retentionInput" value="1000000000" step="100000000" style="background:transparent; border:none; color:var(--text); font-family:inherit; outline:none; width:120px; font-weight:600;">
+    </div>
   </div>
 
   <section class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
@@ -117,9 +129,9 @@
       <div class="kpi-icon" style="background:rgba(250,204,21,.1);color:#facc15"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
       <div><div class="kpi-value" id="kpiPmlRatio">&#x2014;</div><div class="kpi-label">PML Loss Ratio</div></div>
     </div>
-    <div class="kpi-card" style="border-left:4px solid #a78bfa">
-      <div class="kpi-icon" style="background:rgba(167,139,250,.1);color:#a78bfa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg></div>
-      <div><div class="kpi-value" id="kpiWilayaCount">&#x2014;</div><div class="kpi-label">Wilayas Analysed</div></div>
+    <div class="kpi-card" style="border-left:4px solid #38bdf8">
+      <div class="kpi-icon" style="background:rgba(56,189,248,.1);color:#38bdf8"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><path d="M12 8v4M12 16h.01"/></svg></div>
+      <div><div class="kpi-value" id="kpiReinsurance">&#x2014;</div><div class="kpi-label">Reinsurance Need</div></div>
     </div>
   </section>
 
@@ -279,10 +291,15 @@ async function loadPML() {
     if (!res.ok) throw new Error('HTTP '+res.status);
     const d = await res.json();
     if (d.error) throw new Error(d.error);
+    
+    window.lastPmlTotal = d.total_pml;
+    
     document.getElementById('kpiTotalCapital').textContent = fmtB(d.total_capital)+' DZD';
     document.getElementById('kpiTotalPml').textContent = fmtB(d.total_pml)+' DZD';
     document.getElementById('kpiPmlRatio').textContent = (d.pml_ratio*100).toFixed(1)+'%';
-    document.getElementById('kpiWilayaCount').textContent = fmt(d.by_wilaya.length);
+    
+    updateReinsurance();
+    
     renderZoneChart(d.by_zone);
     renderWilayaChart(d.by_wilaya.slice(0,10));
     renderRatioTable(d.damage_ratios, d.multiplier);
@@ -294,6 +311,15 @@ async function loadPML() {
     document.getElementById('pmlStatus').textContent = 'Error: '+err.message;
   }
 }
+
+function updateReinsurance() {
+  if (typeof window.lastPmlTotal === 'undefined') return;
+  const retention = parseFloat(document.getElementById('retentionInput').value) || 0;
+  const need = Math.max(0, window.lastPmlTotal - retention);
+  document.getElementById('kpiReinsurance').textContent = fmtB(need) + ' DZD';
+}
+
+document.getElementById('retentionInput').addEventListener('input', updateReinsurance);
 
 function renderZoneChart(byZone) {
   const ctx = document.getElementById('pmlZoneChart');
@@ -328,5 +354,34 @@ function renderRatioTable(ratios, mult) {
 
 loadDiagnosticData().catch(err => {
   document.getElementById('recommendationsList').innerHTML = '<div class="rec-card danger"><div class="rec-title">Unexpected Error</div><div class="rec-desc">'+err.message+'</div></div>';
+});
+
+// PDF EXPORT
+document.getElementById('exportPdfBtn').addEventListener('click', () => {
+  const activeTabId = document.querySelector('.tab-pane.active').id;
+  const element = document.getElementById(activeTabId);
+  const btn = document.getElementById('exportPdfBtn');
+  const originalHtml = btn.innerHTML;
+  
+  btn.innerHTML = 'Exporting...';
+  btn.disabled = true;
+  
+  const opt = {
+    margin:       0.3,
+    filename:     'AEC_Risk_Report.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+  
+  html2pdf().set(opt).from(element).save().then(() => {
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+  }).catch(err => {
+    console.error('PDF export failed:', err);
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+    alert('Failed to generate PDF. Check console for details.');
+  });
 });
 {% endblock %}
