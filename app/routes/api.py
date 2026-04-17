@@ -208,3 +208,42 @@ def by_rpa_zone():
     result.sort(key=lambda x: order.get(x["zone"], 6))
 
     return jsonify(result)
+
+
+@api_bp.route('/all-policies')
+def all_policies():
+    """Return all policy rows for the datatable view."""
+    ds_id = request.args.get('dataset_id', type=int)
+    con = get_db_connection(ds_id)
+    if not con:
+        return jsonify({'error': 'Invalid or missing dataset_id'}), 400
+
+    try:
+        cur = con.cursor()
+        cur.execute("""
+            SELECT
+                id,
+                numero_police,
+                code_sous_branche,
+                num_avnt_cours,
+                date_effet,
+                date_expiration,
+                type_installation,
+                wilaya,
+                commune,
+                capital_assure,
+                prime_nette
+            FROM policies
+            ORDER BY id
+            LIMIT 100000
+        """)
+        rows = cur.fetchall()
+        cur.execute("SELECT COUNT(*) FROM policies")
+        total = cur.fetchone()[0]
+    finally:
+        con.close()
+
+    return jsonify({
+        'total': total,
+        'rows': [dict(r) for r in rows]
+    })

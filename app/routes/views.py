@@ -232,3 +232,9 @@ def diagnostic():
     redir, dataset, all_datasets = get_dashboard_context('views.diagnostic')
     if redir: return redir
     return render_template('diagnostic.html', dataset=dataset, all_datasets=all_datasets, active_page='diagnostic')
+
+@views_bp.route('/dashboard/data')
+def datatable():
+    redir, dataset, all_datasets = get_dashboard_context('views.datatable')
+    if redir: return redir
+    return render_template('datatable.html', dataset=dataset, all_datasets=all_datasets, active_page='datatable')

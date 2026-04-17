@@ -1,0 +1,305 @@
+{% extends 'dashboard_base.html' %}
+{% block page_title %}Polices{% endblock %}
+{% block page_subtitle %}Ensemble des polices assurées — recherche et filtrage par colonne{% endblock %}
+
+{% block head %}
+<style>
+    .polices-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        height: calc(100vh - 130px);
+    }
+
+    .polices-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .polices-badges {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        padding: 0.3rem 0.75rem;
+        border-radius: 2rem;
+    }
+
+    .badge-lime {
+        background: rgba(187,202,20,0.12);
+        border: 1px solid rgba(187,202,20,0.25);
+        color: var(--accent);
+    }
+
+    .badge-muted {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border);
+        color: var(--muted);
+    }
+
+    .polices-hint {
+        font-size: 0.78rem;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .polices-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .polices-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+
+    .polices-card-header h2 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .polices-card-header span {
+        font-size: 0.75rem;
+        color: var(--muted);
+    }
+
+    #policesLoading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        flex: 1;
+        padding: 3rem;
+        color: var(--muted);
+    }
+
+    .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid rgba(187,202,20,0.15);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #policesGrid {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="polices-page">
+
+    <div class="polices-topbar">
+        <div class="polices-badges">
+            <span class="badge badge-lime" id="totalBadge">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Chargement…
+            </span>
+            <span class="badge badge-muted" id="shownBadge" style="display:none;"></span>
+        </div>
+        <p class="polices-hint">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Utilisez les filtres sous chaque colonne &nbsp;·&nbsp; Cliquez sur l'en-tête pour trier
+        </p>
+    </div>
+
+    <div class="polices-card">
+        <div class="polices-card-header">
+            <h2>Polices d'assurance — Portefeuille complet</h2>
+            <span>100 polices par page</span>
+        </div>
+
+        <div id="policesLoading">
+            <div class="spinner"></div>
+            <span>Chargement du dataset…</span>
+        </div>
+
+        <div id="policesGrid" class="ag-theme-alpine-dark" style="display:none;"></div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+let policesGridApi = null;
+
+const colDefs = [
+    {
+        field: 'numero_police',
+        headerName: 'N° Police',
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        pinned: 'left',
+        width: 155,
+        cellStyle: { fontWeight: '600', color: '#BBCA14' }
+    },
+    {
+        field: 'wilaya',
+        headerName: 'Wilaya',
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        flex: 2,
+        minWidth: 160
+    },
+    {
+        field: 'commune',
+        headerName: 'Commune',
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        flex: 2,
+        minWidth: 140
+    },
+    {
+        field: 'type_installation',
+        headerName: "Type d'actif",
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        flex: 2,
+        minWidth: 160
+    },
+    {
+        field: 'code_sous_branche',
+        headerName: 'Sous-branche',
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        width: 140
+    },
+    {
+        field: 'num_avnt_cours',
+        headerName: 'N° Avenant',
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        width: 130
+    },
+    {
+        field: 'date_effet',
+        headerName: 'Date Effet',
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        width: 125
+    },
+    {
+        field: 'date_expiration',
+        headerName: 'Date Expiration',
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        width: 145
+    },
+    {
+        field: 'capital_assure',
+        headerName: 'Capital Assuré (DZD)',
+        filter: 'agNumberColumnFilter',
+        floatingFilter: true,
+        flex: 2,
+        minWidth: 190,
+        type: 'numericColumn',
+        valueFormatter: p => p.value != null ? fmt(p.value) : '—',
+        cellStyle: { textAlign: 'right', fontVariantNumeric: 'tabular-nums' }
+    },
+    {
+        field: 'prime_nette',
+        headerName: 'Prime Nette (DZD)',
+        filter: 'agNumberColumnFilter',
+        floatingFilter: true,
+        flex: 1.5,
+        minWidth: 170,
+        type: 'numericColumn',
+        valueFormatter: p => p.value != null ? fmt(p.value) : '—',
+        cellStyle: { textAlign: 'right', fontVariantNumeric: 'tabular-nums' }
+    }
+];
+
+const gridDiv = document.getElementById('policesGrid');
+
+policesGridApi = agGrid.createGrid(gridDiv, {
+    columnDefs: colDefs,
+    rowData: [],
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
+    },
+    pagination: true,
+    paginationPageSize: 100,
+    animateRows: false,
+    suppressCellFocus: true,
+    enableCellTextSelection: true,
+    onFilterChanged: () => {
+        const shown = policesGridApi.getDisplayedRowCount();
+        const total = parseInt(document.getElementById('totalBadge').dataset.total || '0');
+        const badge = document.getElementById('shownBadge');
+        if (shown < total) {
+            badge.textContent = fmt(shown) + ' filtrées';
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+});
+
+async function loadPolices() {
+    try {
+        const res = await fetch(`/api/all-policies?dataset_id=${currentDatasetId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const payload = await res.json();
+        if (payload.error) throw new Error(payload.error);
+
+        const rows = payload.rows || [];
+        const total = payload.total || rows.length;
+
+        const totalBadge = document.getElementById('totalBadge');
+        totalBadge.dataset.total = total;
+        totalBadge.innerHTML = `
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            ${fmt(total)} polices`;
+
+        document.getElementById('policesLoading').style.display = 'none';
+        gridDiv.style.display = 'block';
+
+        policesGridApi.setGridOption('rowData', rows);
+
+    } catch (err) {
+        console.error('Polices load error:', err);
+        document.getElementById('policesLoading').innerHTML = `
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span style="color:#f87171;font-weight:600;">Erreur de chargement</span>
+            <span style="font-size:0.82rem;color:var(--muted);">${err.message}</span>`;
+    }
+}
+
+loadPolices();
+{% endblock %}
