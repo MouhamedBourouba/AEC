@@ -1,0 +1,111 @@
+{% extends 'dashboard_base.html' %}
+{% block page_title %}Asset Types{% endblock %}
+{% block page_subtitle %}Distribution of risk across asset categories{% endblock %}
+
+{% block content %}
+<section class="charts-grid" style="display: block; margin-bottom: 2rem;">
+    <div class="chart-card wide" style="display: flex; flex-direction: row; gap: 2rem; align-items: center;">
+        <div style="flex: 1; min-width: 0;">
+            <div class="chart-card-header">
+                <h2>Policies by Asset Type</h2>
+            </div>
+            <div class="chart-wrap donut-wrap" style="height: 300px;">
+                <canvas id="typeChart"></canvas>
+            </div>
+        </div>
+        <div id="typeLegend" class="custom-legend" style="flex: 1; max-height: 300px; overflow-y: auto;"></div>
+    </div>
+</section>
+
+<section class="table-section">
+    <div class="table-card">
+        <div class="table-card-header" style="display:flex; align-items:center; justify-content:space-between;">
+            <h2>Detailed Asset Exposure</h2>
+            <input id="gridSearch" type="text" placeholder="Search type…" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.85rem;border-radius:0.5rem;font-family:inherit;font-size:0.85rem;outline:none;width:220px;">
+        </div>
+        <div class="ag-grid-container">
+            <div id="typeGrid" class="ag-theme-alpine-dark" style="width:100%;height:520px;"></div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+async function loadData() {
+    const res = await fetch(`/api/by-type?dataset_id=${currentDatasetId}`);
+    const data = await res.json();
+
+    const total = data.reduce((a, b) => a + b.count, 0);
+    const totalCap = data.reduce((a, b) => a + b.total_capital, 0);
+
+    const labels = data.map(d => {
+        const t = d.type;
+        return t.length > 35 ? t.slice(0, 33) + '…' : t;
+    });
+
+    // Doughnut chart
+    const legend = document.getElementById('typeLegend');
+    legend.innerHTML = data.map((row, i) => {
+        const pct = total ? ((row.count / total) * 100).toFixed(1) : '0.0';
+        return `<div class="legend-item" style="border-bottom:1px solid var(--border); padding: 0.4rem 0;">
+            <span class="legend-dot" style="background:${PALETTE[i % PALETTE.length]}"></span>
+            <span class="legend-label" style="font-size:0.82rem;">${labels[i]}</span>
+            <span class="legend-pct">${pct}%</span>
+        </div>`;
+    }).join('');
+
+    new Chart(document.getElementById('typeChart'), {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{ data: data.map(d => d.count), backgroundColor: PALETTE, borderWidth: 3, borderColor: '#0f172a' }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '65%',
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)} policies (${((ctx.raw/total)*100).toFixed(1)}%)` } }
+            }
+        }
+    });
+
+    // AG Grid
+    const rowData = data.map((row, i) => ({
+        rank: i + 1,
+        type: row.type,
+        policies: row.count,
+        capital: row.total_capital,
+        policyShare: total ? +((row.count / total) * 100).toFixed(2) : 0,
+        capitalShare: totalCap ? +((row.total_capital / totalCap) * 100).toFixed(2) : 0
+    }));
+
+    const columnDefs = [
+        { field: 'rank',         headerName: '#',                       width: 70,  sortable: true, filter: false },
+        { field: 'type',         headerName: 'Type d\'installation',     flex: 3,    sortable: true, filter: true },
+        { field: 'policies',     headerName: 'Policies',                flex: 1,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => fmt(p.value) },
+        { field: 'policyShare',  headerName: 'Policy Share (%)',        flex: 1,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => p.value.toFixed(2) + ' %' },
+        { field: 'capital',      headerName: 'Capital Insured (DZD)',   flex: 2,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => fmt(p.value) },
+        { field: 'capitalShare', headerName: 'Capital Share (%)',       flex: 1,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => p.value.toFixed(2) + ' %' }
+    ];
+
+    const grid = agGrid.createGrid(document.getElementById('typeGrid'), {
+        columnDefs,
+        rowData,
+        pagination: true,
+        paginationPageSize: 20,
+        paginationPageSizeSelector: [10, 20, 50],
+        defaultColDef: { resizable: true, sortable: true },
+        animateRows: true,
+        suppressMovableColumns: true,
+    });
+
+    document.getElementById('gridSearch').addEventListener('input', e => {
+        grid.setGridOption('quickFilterText', e.target.value);
+    });
+}
+loadData();
+{% endblock %}

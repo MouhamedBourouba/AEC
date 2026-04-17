@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEC — Earthquake Risk Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- AG Grid Community -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-theme-alpine-dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.noStyle.js"></script>
+    <style>
+        /* Override AG Grid theme to match our dark palette */
+        .ag-theme-alpine-dark {
+            --ag-background-color: var(--surface, #111827);
+            --ag-odd-row-background-color: rgba(255,255,255,0.025);
+            --ag-header-background-color: #0d1424;
+            --ag-border-color: rgba(255,255,255,0.07);
+            --ag-row-border-color: rgba(255,255,255,0.05);
+            --ag-foreground-color: #f1f5f9;
+            --ag-secondary-foreground-color: #94a3b8;
+            --ag-font-family: 'Inter', sans-serif;
+            --ag-font-size: 13px;
+            --ag-row-hover-color: rgba(129,140,248,0.08);
+            --ag-selected-row-background-color: rgba(129,140,248,0.15);
+            --ag-range-selection-border-color: #818cf8;
+            --ag-input-focus-border-color: #818cf8;
+        }
+        .ag-theme-alpine-dark .ag-header-cell-label { font-weight: 600; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .ag-theme-alpine-dark .ag-paging-panel { border-top: 1px solid rgba(255,255,255,0.07); color: #94a3b8; font-size: 13px; }
+        .ag-theme-alpine-dark .ag-paging-button { color: #818cf8; }
+        .ag-grid-container { border-radius: 0 0 0.85rem 0.85rem; overflow: hidden; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="dashboard-body">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 4 4-6 4 10"/><path d="M3 21h18"/></svg>
+            <span class="logo-text">AEC Risk</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item">
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><rect x="3" y="3" width="4" height="4" rx="0.5"/><rect x="3" y="9" width="4" height="4" rx="0.5"/><rect x="3" y="15" width="4" height="4" rx="0.5"/></svg>
+                <span>Archive</span>
+            </a>
+            <a href="{{ url_for('views.overview', dataset_id=dataset.id) }}" class="nav-item {% if active_page == 'overview' %}active{% endif %}">
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8"/><rect x="10" y="9" width="4" height="12"/><rect x="17" y="5" width="4" height="16"/></svg>
+                <span>Overview</span>
+            </a>
+            <a href="{{ url_for('views.wilaya_exposure', dataset_id=dataset.id) }}" class="nav-item {% if active_page == 'wilaya' %}active{% endif %}">
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                <span>Wilaya Exposure</span>
+            </a>
+            <a href="{{ url_for('views.type_exposure', dataset_id=dataset.id) }}" class="nav-item {% if active_page == 'type' %}active{% endif %}">
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path><path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"></path></svg>
+                <span>Asset Types</span>
+            </a>
+            <a href="{{ url_for('views.time_exposure', dataset_id=dataset.id) }}" class="nav-item {% if active_page == 'time' %}active{% endif %}">
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                <span>Over Time</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <header class="dash-header">
+            <div class="dash-header-left">
+                <h1>{% block page_title %}Portfolio Dashboard{% endblock %}</h1>
+                <p class="dash-subtitle">{% block page_subtitle %}Earthquake Insurance Exposure — Algeria 2023–2025{% endblock %}</p>
+            </div>
+            <div class="dash-header-right" style="text-align: right;">
+                <div class="dataset-selector" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end;">
+                    <span style="font-size: 0.85rem; color: var(--muted);">Dataset:</span>
+                    <select onchange="window.location.href=window.location.pathname + '?dataset_id=' + this.value" style="background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 0.4rem 0.75rem; border-radius: 0.5rem; outline: none; font-family: inherit;">
+                        {% for ds in all_datasets %}
+                        <option value="{{ ds.id }}" {% if ds.id == dataset.id %}selected{% endif %}>{{ ds.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="last-updated" id="lastUpdated">Loading…</div>
+            </div>
+        </header>
+
+        {% block content %}{% endblock %}
+    </main>
+
+<script>
+// ── Common Helpers ──────────────────────────────────────────────────────────
+const fmt = (n) => new Intl.NumberFormat('fr-DZ').format(n);
+const fmtB = (n) => {
+    if (n >= 1e12) return (n / 1e12).toFixed(2) + ' T';
+    if (n >= 1e9)  return (n / 1e9).toFixed(2) + ' Md';
+    if (n >= 1e6)  return (n / 1e6).toFixed(1) + ' M';
+    return fmt(n);
+};
+
+const PALETTE = [
+    '#818cf8','#c084fc','#38bdf8','#34d399','#f472b6',
+    '#fb923c','#facc15','#a78bfa','#f87171','#4ade80',
+    '#22d3ee','#e879f9','#fbbf24','#60a5fa','#94a3b8'
+];
+
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = 'Inter, sans-serif';
+
+const currentDatasetId = {{ dataset.id }};
+
+document.getElementById('lastUpdated').textContent = 'Loaded: ' + new Date().toLocaleTimeString('fr-DZ');
+
+{% block scripts %}{% endblock %}
+</script>
+</body>
+</html>

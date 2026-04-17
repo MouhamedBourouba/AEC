@@ -1,0 +1,106 @@
+{% extends 'dashboard_base.html' %}
+{% block page_title %}Temporal Exposure{% endblock %}
+{% block page_subtitle %}Policy growth and capital exposure over time{% endblock %}
+
+{% block content %}
+<section class="charts-grid" style="display: block; margin-bottom: 2rem;">
+    <div class="chart-card wide">
+        <div class="chart-card-header">
+            <h2>Policies Over Time</h2>
+        </div>
+        <div class="chart-wrap" style="height: 320px;">
+            <canvas id="yearChart"></canvas>
+        </div>
+    </div>
+</section>
+
+<section class="table-section">
+    <div class="table-card">
+        <div class="table-card-header" style="display:flex; align-items:center; justify-content:space-between;">
+            <h2>Yearly Breakdown</h2>
+            <input id="gridSearch" type="text" placeholder="Search year…" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.85rem;border-radius:0.5rem;font-family:inherit;font-size:0.85rem;outline:none;width:220px;">
+        </div>
+        <div class="ag-grid-container">
+            <div id="timeGrid" class="ag-theme-alpine-dark" style="width:100%;height:520px;"></div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+async function loadData() {
+    const res = await fetch(`/api/by-year?dataset_id=${currentDatasetId}`);
+    const data = await res.json();
+
+    const total = data.reduce((a, b) => a + b.count, 0);
+    const totalCap = data.reduce((a, b) => a + b.total_capital, 0);
+
+    // Chart
+    new Chart(document.getElementById('yearChart'), {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.year),
+            datasets: [{
+                label: 'Policies',
+                data: data.map(d => d.count),
+                borderColor: '#818cf8',
+                backgroundColor: 'rgba(129,140,248,0.15)',
+                fill: true, tension: 0.4,
+                pointBackgroundColor: '#818cf8',
+                pointRadius: 5, pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)} policies` } }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { ticks: { callback: v => fmt(v) }, beginAtZero: true }
+            }
+        }
+    });
+
+    // AG Grid
+    const rowData = data.map(row => ({
+        year: row.year,
+        policies: row.count,
+        capital: row.total_capital,
+        policyShare: total ? +((row.count / total) * 100).toFixed(2) : 0,
+        capitalShare: totalCap ? +((row.total_capital / totalCap) * 100).toFixed(2) : 0,
+        avgCapitalPerPolicy: row.count ? +(row.total_capital / row.count).toFixed(0) : 0
+    }));
+
+    const columnDefs = [
+        { field: 'year',              headerName: 'Year',                    width: 100,  sortable: true, filter: true },
+        { field: 'policies',          headerName: 'Policies',                flex: 1,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => fmt(p.value) },
+        { field: 'policyShare',       headerName: 'Policy Share (%)',        flex: 1,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => p.value.toFixed(2) + ' %' },
+        { field: 'capital',           headerName: 'Capital Insured (DZD)',   flex: 2,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => fmt(p.value) },
+        { field: 'capitalShare',      headerName: 'Capital Share (%)',       flex: 1,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => p.value.toFixed(2) + ' %' },
+        { field: 'avgCapitalPerPolicy', headerName: 'Avg Capital / Policy (DZD)', flex: 2, sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => fmt(p.value) }
+    ];
+
+    const grid = agGrid.createGrid(document.getElementById('timeGrid'), {
+        columnDefs,
+        rowData,
+        pagination: true,
+        paginationPageSize: 25,
+        paginationPageSizeSelector: [10, 25, 50],
+        defaultColDef: { resizable: true, sortable: true },
+        animateRows: true,
+        suppressMovableColumns: true,
+    });
+
+    document.getElementById('gridSearch').addEventListener('input', e => {
+        grid.setGridOption('quickFilterText', e.target.value);
+    });
+}
+loadData();
+{% endblock %}

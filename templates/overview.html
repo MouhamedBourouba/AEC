@@ -1,0 +1,123 @@
+{% extends 'dashboard_base.html' %}
+{% block page_title %}Overview{% endblock %}
+{% block page_subtitle %}High-level portfolio KPIs{% endblock %}
+
+{% block content %}
+<!-- KPI Cards -->
+<section class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card" id="kpiPolicies">
+        <div class="kpi-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        </div>
+        <div class="kpi-content">
+            <div class="kpi-value" id="kpiPoliciesVal">—</div>
+            <div class="kpi-label">Total Policies</div>
+        </div>
+    </div>
+    <div class="kpi-card" id="kpiCapital">
+        <div class="kpi-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+        </div>
+        <div class="kpi-content">
+            <div class="kpi-value" id="kpiCapitalVal">—</div>
+            <div class="kpi-label">Total Capital Insured (DZD)</div>
+        </div>
+    </div>
+    <div class="kpi-card" id="kpiPremium">
+        <div class="kpi-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22,7 13.5,15.5 8.5,10.5 2,17"/><polyline points="16,7 22,7 22,13"/></svg>
+        </div>
+        <div class="kpi-content">
+            <div class="kpi-value" id="kpiPremiumVal">—</div>
+            <div class="kpi-label">Total Net Premium (DZD)</div>
+        </div>
+    </div>
+</section>
+
+<!-- Summary Charts Grid -->
+<section class="charts-grid" style="margin-top: 2rem;">
+    <!-- Bar Chart: Top Wilayas -->
+    <div class="chart-card wide">
+        <div class="chart-card-header">
+            <h2>Capital Exposure by Wilaya</h2>
+            <span class="chart-badge">Top 10</span>
+        </div>
+        <div class="chart-wrap" style="height: 300px;">
+            <canvas id="overviewWilayaChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Doughnut: By Type -->
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>Policies by Asset Type</h2>
+        </div>
+        <div class="chart-wrap donut-wrap" style="height: 250px;">
+            <canvas id="overviewTypeChart"></canvas>
+        </div>
+        <div id="overviewTypeLegend" class="custom-legend" style="max-height: 150px; overflow-y: auto;"></div>
+    </div>
+
+    <!-- Line Chart: Policies per Year -->
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>Policies Over Time</h2>
+        </div>
+        <div class="chart-wrap" style="height: 250px;">
+            <canvas id="overviewYearChart"></canvas>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+async function loadOverview() {
+    // KPIs
+    const statsRes = await fetch(`/api/stats?dataset_id=${currentDatasetId}`);
+    const d = await statsRes.json();
+    document.getElementById('kpiPoliciesVal').textContent = fmt(d.total_policies);
+    document.getElementById('kpiCapitalVal').textContent  = fmtB(d.total_capital);
+    document.getElementById('kpiPremiumVal').textContent  = fmtB(d.total_premium);
+
+    // Wilaya Chart (Top 10)
+    const wilayaRes = await fetch(`/api/by-wilaya?dataset_id=${currentDatasetId}`);
+    const wilayaData = await wilayaRes.json();
+    const top10 = wilayaData.slice(0, 10);
+    new Chart(document.getElementById('overviewWilayaChart'), {
+        type: 'bar',
+        data: {
+            labels: top10.map(d => d.wilaya.replace(/^\d+ - /, '')),
+            datasets: [{ label: 'Capital', data: top10.map(d => d.total_capital), backgroundColor: PALETTE, borderRadius: 4 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmtB(ctx.raw) + ' DZD' } } }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmtB(v) } } } }
+    });
+
+    // Type Chart
+    const typeRes = await fetch(`/api/by-type?dataset_id=${currentDatasetId}`);
+    const typeData = await typeRes.json();
+    const totalType = typeData.reduce((a, b) => a + b.count, 0);
+    new Chart(document.getElementById('overviewTypeChart'), {
+        type: 'doughnut',
+        data: { labels: typeData.map(d => d.type.slice(0, 30)), datasets: [{ data: typeData.map(d => d.count), backgroundColor: PALETTE, borderWidth: 3, borderColor: '#0f172a' }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+    });
+    document.getElementById('overviewTypeLegend').innerHTML = typeData.map((row, i) => {
+        const pct = totalType ? ((row.count / totalType) * 100).toFixed(1) : '0';
+        return `<div class="legend-item" style="padding: 0.3rem 0; border-bottom: 1px solid var(--border);">
+            <span class="legend-dot" style="background:${PALETTE[i % PALETTE.length]}"></span>
+            <span class="legend-label" style="font-size:0.8rem;">${row.type.length > 25 ? row.type.slice(0, 23)+'…' : row.type}</span>
+            <span class="legend-pct">${pct}%</span>
+        </div>`;
+    }).join('');
+
+    // Year Chart
+    const yearRes = await fetch(`/api/by-year?dataset_id=${currentDatasetId}`);
+    const yearData = await yearRes.json();
+    new Chart(document.getElementById('overviewYearChart'), {
+        type: 'line',
+        data: { labels: yearData.map(d => d.year), datasets: [{ label: 'Policies', data: yearData.map(d => d.count), borderColor: '#818cf8', backgroundColor: 'rgba(129,140,248,0.15)', fill: true, tension: 0.4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } } }
+    });
+}
+loadOverview();
+{% endblock %}

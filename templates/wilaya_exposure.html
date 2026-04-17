@@ -1,0 +1,103 @@
+{% extends 'dashboard_base.html' %}
+{% block page_title %}Wilaya Exposure{% endblock %}
+{% block page_subtitle %}Capital and policy concentration by region{% endblock %}
+
+{% block content %}
+<section class="charts-grid" style="display: block; margin-bottom: 2rem;">
+    <div class="chart-card wide">
+        <div class="chart-card-header">
+            <h2>Capital Exposure by Wilaya</h2>
+            <span class="chart-badge">Top 15</span>
+        </div>
+        <div class="chart-wrap" style="height: 320px;">
+            <canvas id="wilayaChart"></canvas>
+        </div>
+    </div>
+</section>
+
+<section class="table-section">
+    <div class="table-card">
+        <div class="table-card-header" style="display:flex; align-items:center; justify-content:space-between;">
+            <h2>Detailed Exposure — All Wilayas</h2>
+            <input id="gridSearch" type="text" placeholder="Search wilaya…" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.85rem;border-radius:0.5rem;font-family:inherit;font-size:0.85rem;outline:none;width:220px;">
+        </div>
+        <div class="ag-grid-container">
+            <div id="wilayaGrid" class="ag-theme-alpine-dark" style="width:100%;height:520px;"></div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+async function loadData() {
+    const res = await fetch(`/api/by-wilaya?dataset_id=${currentDatasetId}`);
+    const data = await res.json();
+
+    // Chart (top 15 only)
+    const top15 = data.slice(0, 15);
+    const totalCap = data.reduce((a, b) => a + b.total_capital, 0);
+
+    new Chart(document.getElementById('wilayaChart'), {
+        type: 'bar',
+        data: {
+            labels: top15.map(d => d.wilaya.replace(/^\d+ - /, '')),
+            datasets: [{
+                label: 'Capital Insured',
+                data: top15.map(d => d.total_capital),
+                backgroundColor: PALETTE,
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ' ' + fmtB(ctx.raw) + ' DZD' } }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { ticks: { callback: v => fmtB(v) } }
+            }
+        }
+    });
+
+    // AG Grid
+    const rowData = data.map((row, i) => ({
+        rank: i + 1,
+        wilaya: row.wilaya,
+        policies: row.count,
+        capital: row.total_capital,
+        share: totalCap ? +((row.total_capital / totalCap) * 100).toFixed(2) : 0
+    }));
+
+    const columnDefs = [
+        { field: 'rank',     headerName: '#',                      width: 70,  sortable: true, filter: false },
+        { field: 'wilaya',   headerName: 'Wilaya',                 flex: 2,    sortable: true, filter: true },
+        { field: 'policies', headerName: 'Policies',               flex: 1,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => fmt(p.value) },
+        { field: 'capital',  headerName: 'Capital Insured (DZD)',  flex: 2,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => fmt(p.value) },
+        { field: 'share',    headerName: 'Share (%)',              flex: 1,    sortable: true, filter: 'agNumberColumnFilter',
+          valueFormatter: p => p.value.toFixed(2) + ' %',
+          cellStyle: p => ({ color: p.value > 10 ? '#f472b6' : p.value > 5 ? '#facc15' : '#94a3b8' }) }
+    ];
+
+    const grid = agGrid.createGrid(document.getElementById('wilayaGrid'), {
+        columnDefs,
+        rowData,
+        pagination: true,
+        paginationPageSize: 20,
+        paginationPageSizeSelector: [10, 20, 50, 100],
+        defaultColDef: { resizable: true, sortable: true },
+        animateRows: true,
+        suppressMovableColumns: true,
+    });
+
+    document.getElementById('gridSearch').addEventListener('input', e => {
+        grid.setGridOption('quickFilterText', e.target.value);
+    });
+}
+loadData();
+{% endblock %}

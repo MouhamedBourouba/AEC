@@ -3,23 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AEC Hackathon Project</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>AEC — Earthquake Risk Platform</title>
+    <meta name="description" content="Upload and analyze earthquake insurance portfolio data for Algeria.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>AEC Hackathon</h1>
-            <p>Welcome to our awesome project!</p>
-        </header>
-        <main>
-            <div class="card">
-                <h2>Getting Started</h2>
-                <p>This is a basic Flask setup serving HTML templates. You can start building your app from here.</p>
-                <button class="btn">Explore Features</button>
+
+<div class="page">
+
+    <!-- Header -->
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="brand">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M3 17l4-8 4 4 4-6 4 10"/><path d="M3 21h18"/></svg>
+            <span class="brand-name">AEC <span class="brand-sub">Risk Platform</span></span>
+        </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-inner">
+            <div class="hero-badge">Algeria Earthquake Risk Assessment</div>
+            <h1 class="hero-title">Analyze Your Insurance<br><span class="gradient-text">Portfolio Exposure</span></h1>
+            <p class="hero-desc">Upload a CSV dataset to instantly generate a dashboard with exposure maps, capital distribution, and risk indicators.</p>
+        </div>
+    </section>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-container">
+            {% for category, msg in messages %}
+            <div class="flash flash-{{ category }}">
+                <span>{{ '⚠️' if category == 'error' else '✅' }}</span>
+                {{ msg }}
             </div>
-        </main>
-    </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="content">
+
+        <!-- Upload Card -->
+        <section class="upload-section">
+            <div class="section-label">New Dataset</div>
+            <form id="uploadForm" method="POST" action="/upload" enctype="multipart/form-data">
+                <div class="upload-card" id="dropZone">
+                    <div class="upload-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                </div>
+                    <div class="upload-text">
+                        <strong>Drag & drop your CSV file here</strong>
+                        <span>or click to browse</span>
+                        <span class="upload-hint">Supports: CATNAT format CSV • Max 100 MB</span>
+                    </div>
+                    <input type="file" id="fileInput" name="file" accept=".csv" hidden>
+                    <div class="file-preview" id="filePreview" style="display:none;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--success)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                        <span id="fileNameDisplay"></span>
+                        <button type="button" class="clear-file" id="clearFile">&times;</button>
+                    </div>
+                </div>
+
+                <div class="upload-meta">
+                    <div class="form-group">
+                        <label for="datasetName">Dataset Name</label>
+                        <input type="text" id="datasetName" name="name" placeholder="e.g. CATNAT 2023–2025" autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn-upload" id="uploadBtn" disabled>
+                        <span id="uploadBtnText">Upload & Analyze →</span>
+                        <span id="uploadSpinner" style="display:none;">Processing…</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Datasets List -->
+        <section class="datasets-section">
+            <div class="section-label">Saved Datasets</div>
+
+            {% if datasets %}
+            <div class="datasets-grid">
+                {% for ds in datasets %}
+                <div class="dataset-card">
+                    <div class="dataset-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    </div>
+                    <div class="dataset-info">
+                        <div class="dataset-name">{{ ds.name }}</div>
+                        <div class="dataset-meta">
+                            <span>{{ '{:,}'.format(ds.record_count) }} records</span>
+                            <span class="sep">·</span>
+                            <span>{{ ds.uploaded_at.strftime('%d %b %Y, %H:%M') }}</span>
+                        </div>
+                        <div class="dataset-file">{{ ds.filename }}</div>
+                    </div>
+                    <div class="dataset-actions">
+                        <a href="/dashboard?dataset_id={{ ds.id }}" class="btn-analyze">Analyze</a>
+                        <form method="POST" action="/delete/{{ ds.id }}" onsubmit="return confirm('Delete this dataset?')">
+                            <button type="submit" class="btn-delete" title="Delete dataset">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted)"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13,2 13,9 20,9"/></svg>
+                </div>
+                <p>No datasets yet. Upload your first CSV file above to get started.</p>
+            </div>
+            {% endif %}
+        </section>
+
+    </main>
+
+    <footer class="site-footer">
+        <p>AEC Hackathon Project — Earthquake Risk Assessment Platform</p>
+    </footer>
+</div>
+
+<script>
+const dropZone    = document.getElementById('dropZone');
+const fileInput   = document.getElementById('fileInput');
+const filePreview = document.getElementById('filePreview');
+const fileNameDisplay = document.getElementById('fileNameDisplay');
+const clearFile   = document.getElementById('clearFile');
+const uploadBtn   = document.getElementById('uploadBtn');
+const datasetName = document.getElementById('datasetName');
+const uploadForm  = document.getElementById('uploadForm');
+
+function setFile(file) {
+    if (!file) return;
+    fileNameDisplay.textContent = file.name;
+    filePreview.style.display = 'flex';
+    dropZone.classList.add('has-file');
+    uploadBtn.disabled = false;
+    if (!datasetName.value) datasetName.value = file.name.replace(/\.[^/.]+$/, '');
+}
+
+function clearSelection() {
+    fileInput.value = '';
+    filePreview.style.display = 'none';
+    dropZone.classList.remove('has-file', 'drag-over');
+    uploadBtn.disabled = true;
+    datasetName.value = '';
+}
+
+dropZone.addEventListener('click', (e) => {
+    if (e.target !== clearFile) fileInput.click();
+});
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+
+clearFile.addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearSelection();
+});
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        setFile(file);
+    }
+});
+
+uploadForm.addEventListener('submit', () => {
+    uploadBtn.disabled = true;
+    document.getElementById('uploadBtnText').style.display = 'none';
+    document.getElementById('uploadSpinner').style.display = 'inline';
+});
+</script>
 </body>
 </html>
