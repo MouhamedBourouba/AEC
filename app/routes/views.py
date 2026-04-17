@@ -220,3 +220,15 @@ def gis_map():
     redir, dataset, all_datasets = get_dashboard_context('views.gis_map')
     if redir: return redir
     return render_template('map.html', dataset=dataset, all_datasets=all_datasets, active_page='map')
+
+@views_bp.route('/dashboard/zone')
+def zone_exposure():
+    redir, dataset, all_datasets = get_dashboard_context('views.zone_exposure')
+    if redir: return redir
+    return render_template('zone_exposure.html', dataset=dataset, all_datasets=all_datasets, active_page='zone')
+
+@views_bp.route('/dashboard/diagnostic')
+def diagnostic():
+    redir, dataset, all_datasets = get_dashboard_context('views.diagnostic')
+    if redir: return redir
+    return render_template('diagnostic.html', dataset=dataset, all_datasets=all_datasets, active_page='diagnostic')

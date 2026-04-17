@@ -80,8 +80,16 @@
         <button class="map-mode-btn active" id="btnCapital" onclick="setMode('capital')">Capital Insured</button>
         <button class="map-mode-btn" id="btnCount"   onclick="setMode('count')">Policy Count</button>
         <button class="map-mode-btn" id="btnPremium" onclick="setMode('premium')">Net Premium</button>
-        <div class="map-legend-box">
+        <button class="map-mode-btn" id="btnZone" onclick="setMode('zone')">Seismic Zone (RPA)</button>
+        <div class="map-legend-box" id="legendScale">
             <span>Low</span><div class="legend-gradient"></div><span>High</span>
+        </div>
+        <div class="map-legend-box" id="legendZones" style="display: none; gap: 8px;">
+            <span style="color:#22d3ee">0</span>
+            <span style="color:#4ade80">I</span>
+            <span style="color:#facc15">IIa</span>
+            <span style="color:#fb923c">IIb</span>
+            <span style="color:#f87171">III</span>
         </div>
     </div>
 
@@ -141,6 +149,16 @@ const WILAYA_COORDS = {
 
 const ALGERIA_BOUNDS = L.latLngBounds([[18.9,-8.7],[37.5,12.0]]);
 const WORLD_RING = [[-90,-180],[-90,180],[90,180],[90,-180],[-90,-180]];
+
+// RPA Zone Colors
+const ZONE_COLORS = {
+    "0": "#22d3ee",
+    "I": "#4ade80",
+    "IIa": "#facc15",
+    "IIb": "#fb923c",
+    "III": "#f87171",
+    "Inconnue": "#94a3b8"
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function extractCode(name) {
@@ -225,9 +243,15 @@ async function loadAlgeriaBoundary() {
 // ── Mode switch ───────────────────────────────────────────────────────────────
 function setMode(mode) {
     currentMode = mode;
-    ['Capital','Count','Premium'].forEach(m => {
-        document.getElementById('btn'+m).classList.toggle('active', mode === m.toLowerCase());
+    ['Capital','Count','Premium','Zone'].forEach(m => {
+        const btn = document.getElementById('btn'+m);
+        if (btn) btn.classList.toggle('active', mode === m.toLowerCase());
     });
+    
+    // Toggle legends
+    document.getElementById('legendScale').style.display = (mode === 'zone') ? 'none' : 'flex';
+    document.getElementById('legendZones').style.display = (mode === 'zone') ? 'flex' : 'none';
+    
     renderCircles();
 }
 
@@ -236,6 +260,7 @@ function renderCircles() {
     circleLayer.clearLayers();
     if (!wilayaData.length) return;
 
+    // For non-zone modes, compute maxVal for scaling
     const values = wilayaData.map(d =>
         currentMode === 'capital'  ? d.total_capital :
         currentMode === 'count'    ? d.count :
@@ -249,10 +274,22 @@ function renderCircles() {
         if (!coords) return;
 
         const val    = values[i];
-        const ratio  = val / maxVal;
-        const color  = riskColor(ratio);
-        const radius = 18000 + ratio * 95000;
-        const pct    = (ratio * 100).toFixed(1);
+        let ratio    = val / maxVal;
+        
+        let color, radius;
+        if (currentMode === 'zone') {
+            const z = row.zone_rpa || "Inconnue";
+            color = ZONE_COLORS[z] || ZONE_COLORS["Inconnue"];
+            // Fixed radius or slightly scaled by capital for zone mode
+            // Using a standard radius, but still proportional to importance
+            ratio = row.total_capital / (Math.max(...wilayaData.map(d => d.total_capital)) || 1);
+            radius = 18000 + ratio * 95000;
+        } else {
+            color  = riskColor(ratio);
+            radius = 18000 + ratio * 95000;
+        }
+        
+        const pct = (row.total_capital / (wilayaData.reduce((s,d) => s + d.total_capital, 0) || 1) * 100).toFixed(1);
 
         const circle = L.circle(coords, {
             radius, color,
@@ -265,6 +302,7 @@ function renderCircles() {
         const popup = `
         <div class="map-popup">
             <h3>${row.wilaya}</h3>
+            <div class="map-popup-row"><span>Zone RPA</span><span>${row.zone_rpa || "Inconnue"}</span></div>
             <div class="map-popup-row"><span>Capital Insured</span><span>${fmtB(row.total_capital)} DZD</span></div>
             <div class="map-popup-row"><span>Policies</span><span>${fmt(row.count)}</span></div>
             <div class="map-popup-row"><span>Net Premium</span><span>${fmtB(row.total_premium)} DZD</span></div>

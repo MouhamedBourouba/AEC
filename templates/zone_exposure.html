@@ -1,0 +1,413 @@
+{% extends 'dashboard_base.html' %}
+{% block page_title %}RPA Seismic Zones{% endblock %}
+{% block page_subtitle %}Portfolio exposure according to Algerian seismic regulations (RPA 99/2003){% endblock %}
+
+{% block content %}
+<section class="kpi-grid" id="zoneKpiGrid">
+    <div class="kpi-card" id="kpiZone3" style="border-left: 4px solid #f87171;">
+        <div class="kpi-content">
+            <div class="kpi-label" style="color: #f87171;">Zone III (High Risk)</div>
+            <div class="kpi-value" id="kpiZone3Val">—</div>
+            <div class="kpi-label" style="font-size: 0.75rem;">Capital Insured</div>
+        </div>
+    </div>
+    <div class="kpi-card" id="kpiZone2b" style="border-left: 4px solid #fb923c;">
+        <div class="kpi-content">
+            <div class="kpi-label" style="color: #fb923c;">Zone IIb (Fairly High)</div>
+            <div class="kpi-value" id="kpiZone2bVal">—</div>
+            <div class="kpi-label" style="font-size: 0.75rem;">Capital Insured</div>
+        </div>
+    </div>
+    <div class="kpi-card" id="kpiZone2a" style="border-left: 4px solid #facc15;">
+        <div class="kpi-content">
+            <div class="kpi-label" style="color: #facc15;">Zone IIa (Moderate)</div>
+            <div class="kpi-value" id="kpiZone2aVal">—</div>
+            <div class="kpi-label" style="font-size: 0.75rem;">Capital Insured</div>
+        </div>
+    </div>
+    <div class="kpi-card" id="kpiZone1" style="border-left: 4px solid #4ade80;">
+        <div class="kpi-content">
+            <div class="kpi-label" style="color: #4ade80;">Zone I & 0 (Low/Negligible)</div>
+            <div class="kpi-value" id="kpiZone1Val">—</div>
+            <div class="kpi-label" style="font-size: 0.75rem;">Capital Insured</div>
+        </div>
+    </div>
+</section>
+
+<section class="charts-grid" style="margin-top: 1.5rem;">
+    <!-- Horizontal Bar Chart: Capital by Zone -->
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>Capital Insured by Seismic Zone</h2>
+        </div>
+        <div class="chart-wrap" style="height: 300px;">
+            <canvas id="zoneCapitalChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Doughnut Chart: Policy Count by Zone -->
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>Policies by Seismic Zone</h2>
+        </div>
+        <div class="chart-wrap donut-wrap" style="height: 250px;">
+            <canvas id="zoneCountChart"></canvas>
+        </div>
+        <div id="zoneCountLegend" class="custom-legend"></div>
+    </div>
+</section>
+
+<!-- Analysis and Tools Section (Phase II-B) -->
+<section class="charts-grid" style="margin-top: 1.5rem; grid-template-columns: 1fr;">
+    <div class="chart-card">
+        <div class="chart-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Exposure Concentration by Wilaya</h2>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <label for="retentionThreshold" style="font-size: 0.8rem; color: #94a3b8;">Retention Capacity Alert (DZD):</label>
+                <select id="retentionThreshold" onchange="loadZoneData()" style="background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 0.3rem; border-radius: 0.3rem;">
+                    <option value="500000000">500 Million DZD</option>
+                    <option value="1000000000" selected>1 Billion DZD</option>
+                    <option value="5000000000">5 Billion DZD</option>
+                    <option value="10000000000">10 Billion DZD</option>
+                </select>
+            </div>
+        </div>
+        <div id="zoneGrid" class="ag-theme-alpine-dark ag-grid-container" style="height: 400px; width: 100%; border-radius: 0.5rem; margin-top: 1rem;"></div>
+    </div>
+</section>
+
+<!-- MPL Simulation Section (Phase II-B) -->
+<section class="charts-grid" style="margin-top: 1.5rem; grid-template-columns: 1fr;">
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>Maximum Probable Loss (MPL) Simulation</h2>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">Adjust the damage ratio (Taux de destruction) for each seismic zone to simulate the total probable loss across the portfolio.</p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <!-- Zone III Slider -->
+            <div style="background: var(--surface2); padding: 1rem; border-radius: 0.5rem; border-left: 3px solid #f87171;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="font-weight: 600; color: #f87171;">Zone III</span>
+                    <span id="valZone3">50%</span>
+                </div>
+                <input type="range" id="sliderZone3" min="0" max="100" value="50" style="width: 100%;" oninput="updateMpl()">
+            </div>
+            
+            <!-- Zone IIb Slider -->
+            <div style="background: var(--surface2); padding: 1rem; border-radius: 0.5rem; border-left: 3px solid #fb923c;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="font-weight: 600; color: #fb923c;">Zone IIb</span>
+                    <span id="valZone2b">30%</span>
+                </div>
+                <input type="range" id="sliderZone2b" min="0" max="100" value="30" style="width: 100%;" oninput="updateMpl()">
+            </div>
+            
+            <!-- Zone IIa Slider -->
+            <div style="background: var(--surface2); padding: 1rem; border-radius: 0.5rem; border-left: 3px solid #facc15;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="font-weight: 600; color: #facc15;">Zone IIa</span>
+                    <span id="valZone2a">15%</span>
+                </div>
+                <input type="range" id="sliderZone2a" min="0" max="100" value="15" style="width: 100%;" oninput="updateMpl()">
+            </div>
+            
+            <!-- Zone I Slider -->
+            <div style="background: var(--surface2); padding: 1rem; border-radius: 0.5rem; border-left: 3px solid #4ade80;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="font-weight: 600; color: #4ade80;">Zone I</span>
+                    <span id="valZone1">5%</span>
+                </div>
+                <input type="range" id="sliderZone1" min="0" max="100" value="5" style="width: 100%;" oninput="updateMpl()">
+            </div>
+            
+             <!-- Zone 0 Slider -->
+             <div style="background: var(--surface2); padding: 1rem; border-radius: 0.5rem; border-left: 3px solid #22d3ee;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="font-weight: 600; color: #22d3ee;">Zone 0</span>
+                    <span id="valZone0">0%</span>
+                </div>
+                <input type="range" id="sliderZone0" min="0" max="100" value="0" style="width: 100%;" oninput="updateMpl()">
+            </div>
+        </div>
+        
+        <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.3); border-radius: 0.5rem; text-align: center;">
+            <h3 style="color: #f87171; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em;">Estimated Maximum Probable Loss (MPL)</h3>
+            <div id="mplTotal" style="font-size: 2.5rem; font-weight: 800; color: #f1f5f9; margin-top: 0.5rem;">0 DZD</div>
+            <div style="font-size: 0.9rem; color: #94a3b8; margin-top: 0.5rem;">Based on current exposure and damage ratios</div>
+        </div>
+    </div>
+</section>
+
+<style>
+    /* Styling for AG Grid cells to show Hotspots */
+    .hotspot-cell {
+        background-color: rgba(248, 113, 113, 0.15) !important;
+        color: #f87171 !important;
+        font-weight: bold;
+    }
+    .safe-cell {
+        color: #4ade80 !important;
+    }
+    
+    .zone-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+        min-width: 40px;
+    }
+    .zone-III { background-color: rgba(248, 113, 113, 0.2); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.5); }
+    .zone-IIb { background-color: rgba(251, 146, 60, 0.2); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.5); }
+    .zone-IIa { background-color: rgba(250, 204, 21, 0.2); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.5); }
+    .zone-I   { background-color: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.5); }
+    .zone-0   { background-color: rgba(34, 211, 238, 0.2); color: #22d3ee; border: 1px solid rgba(34, 211, 238, 0.5); }
+    .zone-Inconnue { background-color: rgba(148, 163, 184, 0.2); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.5); }
+    
+    /* Range Slider Styling */
+    input[type=range] {
+        -webkit-appearance: none;
+        background: rgba(255, 255, 255, 0.1);
+        height: 6px;
+        border-radius: 3px;
+        outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #818cf8;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+const ZONE_COLORS = {
+    "0": "#22d3ee",
+    "I": "#4ade80",
+    "IIa": "#facc15",
+    "IIb": "#fb923c",
+    "III": "#f87171",
+    "Inconnue": "#94a3b8"
+};
+
+let gridApi;
+let currentZoneData = [];
+
+async function loadZoneData() {
+    // Load summary by zone
+    const zoneRes = await fetch(`/api/by-rpa-zone?dataset_id=${currentDatasetId}`);
+    const zoneData = await zoneRes.json();
+    currentZoneData = zoneData;
+    
+    // Load per-wilaya detailed data for the grid
+    const wilayaRes = await fetch(`/api/by-wilaya-map?dataset_id=${currentDatasetId}`);
+    const wilayaData = await wilayaRes.json();
+    
+    const retentionThreshold = parseFloat(document.getElementById('retentionThreshold').value);
+    
+    // Update KPIs
+    let capIII = 0, capIIb = 0, capIIa = 0, capI0 = 0;
+    zoneData.forEach(d => {
+        if (d.zone === 'III') capIII = d.capital;
+        else if (d.zone === 'IIb') capIIb = d.capital;
+        else if (d.zone === 'IIa') capIIa = d.capital;
+        else if (d.zone === 'I' || d.zone === '0') capI0 += d.capital;
+    });
+    
+    document.getElementById('kpiZone3Val').textContent = fmtB(capIII);
+    document.getElementById('kpiZone2bVal').textContent = fmtB(capIIb);
+    document.getElementById('kpiZone2aVal').textContent = fmtB(capIIa);
+    document.getElementById('kpiZone1Val').textContent = fmtB(capI0);
+
+    // Render Charts
+    renderCapitalChart(zoneData);
+    renderCountChart(zoneData);
+    
+    // Total capital across entire portfolio (for percentage calculation)
+    const totalCapital = wilayaData.reduce((sum, item) => sum + item.total_capital, 0);
+    
+    // Render AG Grid
+    renderGrid(wilayaData, totalCapital, retentionThreshold);
+    
+    // Calculate initial MPL
+    updateMpl();
+}
+
+function updateMpl() {
+    const r3 = document.getElementById('sliderZone3').value;
+    const r2b = document.getElementById('sliderZone2b').value;
+    const r2a = document.getElementById('sliderZone2a').value;
+    const r1 = document.getElementById('sliderZone1').value;
+    const r0 = document.getElementById('sliderZone0').value;
+    
+    document.getElementById('valZone3').textContent = r3 + '%';
+    document.getElementById('valZone2b').textContent = r2b + '%';
+    document.getElementById('valZone2a').textContent = r2a + '%';
+    document.getElementById('valZone1').textContent = r1 + '%';
+    document.getElementById('valZone0').textContent = r0 + '%';
+    
+    let totalMpl = 0;
+    
+    currentZoneData.forEach(d => {
+        if (d.zone === 'III') totalMpl += d.capital * (r3 / 100);
+        else if (d.zone === 'IIb') totalMpl += d.capital * (r2b / 100);
+        else if (d.zone === 'IIa') totalMpl += d.capital * (r2a / 100);
+        else if (d.zone === 'I') totalMpl += d.capital * (r1 / 100);
+        else if (d.zone === '0') totalMpl += d.capital * (r0 / 100);
+    });
+    
+    document.getElementById('mplTotal').textContent = fmtB(totalMpl) + ' DZD';
+}
+
+
+function renderCapitalChart(data) {
+    const ctx = document.getElementById('zoneCapitalChart');
+    if (window.capitalChart) window.capitalChart.destroy();
+    
+    // Reverse data to have Zone III at the top of the horizontal bar chart
+    const chartData = [...data].reverse();
+    
+    window.capitalChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartData.map(d => `Zone ${d.zone}`),
+            datasets: [{
+                label: 'Capital Insured (DZD)',
+                data: chartData.map(d => d.capital),
+                backgroundColor: chartData.map(d => ZONE_COLORS[d.zone] || ZONE_COLORS['Inconnue']),
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ' ' + fmtB(ctx.raw) + ' DZD' } }
+            },
+            scales: {
+                x: { ticks: { callback: v => fmtB(v) } },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderCountChart(data) {
+    const ctx = document.getElementById('zoneCountChart');
+    if (window.countChart) window.countChart.destroy();
+    
+    const totalCount = data.reduce((sum, d) => sum + d.count, 0);
+    
+    window.countChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => `Zone ${d.zone}`),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: data.map(d => ZONE_COLORS[d.zone] || ZONE_COLORS['Inconnue']),
+                borderWidth: 2,
+                borderColor: '#111827'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: { legend: { display: false } }
+        }
+    });
+    
+    document.getElementById('zoneCountLegend').innerHTML = data.map(row => {
+        const pct = totalCount ? ((row.count / totalCount) * 100).toFixed(1) : '0';
+        return `<div class="legend-item" style="padding: 0.3rem 0; border-bottom: 1px solid var(--border);">
+            <span class="legend-dot" style="background:${ZONE_COLORS[row.zone] || ZONE_COLORS['Inconnue']}"></span>
+            <span class="legend-label" style="font-size:0.8rem;">Zone ${row.zone}</span>
+            <span class="legend-pct">${pct}%</span>
+        </div>`;
+    }).join('');
+}
+
+function renderGrid(rowData, totalCapital, threshold) {
+    if (gridApi) {
+        gridApi.destroy();
+    }
+    
+    const gridOptions = {
+        rowData: rowData,
+        columnDefs: [
+            { field: 'wilaya', headerName: 'Wilaya', sortable: true, filter: true, flex: 2 },
+            { 
+                field: 'zone_rpa', 
+                headerName: 'Zone RPA', 
+                sortable: true, 
+                filter: true, 
+                width: 120,
+                cellRenderer: params => {
+                    const z = params.value || "Inconnue";
+                    const cls = `zone-${z}`;
+                    return `<span class="zone-badge ${cls}">${z}</span>`;
+                }
+            },
+            { 
+                field: 'total_capital', 
+                headerName: 'Capital Exposé (DZD)', 
+                sortable: true, 
+                flex: 2,
+                valueFormatter: params => fmt(params.value),
+                cellClassRules: {
+                    'hotspot-cell': params => params.value > threshold,
+                    'safe-cell': params => params.value <= threshold && params.value > 0
+                }
+            },
+            { 
+                headerName: '% du Total', 
+                valueGetter: params => {
+                    return params.data.total_capital / totalCapital;
+                },
+                valueFormatter: params => (params.value * 100).toFixed(2) + '%',
+                sortable: true,
+                width: 120
+            },
+            { 
+                field: 'count', 
+                headerName: 'Polices', 
+                sortable: true, 
+                width: 120,
+                valueFormatter: params => fmt(params.value)
+            },
+            { 
+                field: 'total_premium', 
+                headerName: 'Prime Nette (DZD)', 
+                sortable: true, 
+                flex: 2,
+                valueFormatter: params => fmt(params.value)
+            }
+        ],
+        defaultColDef: {
+            resizable: true
+        },
+        pagination: true,
+        paginationPageSize: 20,
+        animateRows: true
+    };
+    
+    const gridDiv = document.querySelector('#zoneGrid');
+    gridApi = agGrid.createGrid(gridDiv, gridOptions);
+    
+    // Sort by Capital Exposed Descending initially
+    gridApi.applyColumnState({
+        state: [{ colId: 'total_capital', sort: 'desc' }],
+        defaultState: { sort: null }
+    });
+}
+
+loadZoneData();
+{% endblock %}

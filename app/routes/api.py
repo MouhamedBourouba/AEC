@@ -116,6 +116,8 @@ def by_year():
         for r in rows
     ])
 
+from app.rpa import get_zone_for_wilaya
+
 @api_bp.route('/by-wilaya-map')
 def by_wilaya_map():
     """Return per-wilaya aggregates (capital, count, premium) for the GIS map."""
@@ -146,6 +148,63 @@ def by_wilaya_map():
             'total_capital': round(r['total_capital'] or 0),
             'count':         r['count'],
             'total_premium': round(r['total_premium'] or 0),
+            'zone_rpa':      get_zone_for_wilaya(r['wilaya'])
         }
         for r in rows
     ])
+
+@api_bp.route('/by-rpa-zone')
+def by_rpa_zone():
+    """Return aggregates grouped by RPA zone."""
+    ds_id = request.args.get('dataset_id', type=int)
+    con = get_db_connection(ds_id)
+    if not con:
+        return jsonify({'error': 'Invalid or missing dataset_id'}), 400
+
+    try:
+        cur = con.cursor()
+        cur.execute("""
+            SELECT wilaya, capital_assure, prime_nette, type_installation
+            FROM policies
+            WHERE wilaya IS NOT NULL AND wilaya != ''
+        """)
+        rows = cur.fetchall()
+    finally:
+        con.close()
+
+    zones_data = {
+        "0":   {"capital": 0, "premium": 0, "count": 0, "types": {}},
+        "I":   {"capital": 0, "premium": 0, "count": 0, "types": {}},
+        "IIa": {"capital": 0, "premium": 0, "count": 0, "types": {}},
+        "IIb": {"capital": 0, "premium": 0, "count": 0, "types": {}},
+        "III": {"capital": 0, "premium": 0, "count": 0, "types": {}},
+        "Inconnue": {"capital": 0, "premium": 0, "count": 0, "types": {}}
+    }
+
+    for r in rows:
+        z = get_zone_for_wilaya(r['wilaya'])
+        cap = r['capital_assure'] or 0
+        prm = r['prime_nette'] or 0
+        typ = r['type_installation'] or "Inconnu"
+        
+        zones_data[z]["capital"] += cap
+        zones_data[z]["premium"] += prm
+        zones_data[z]["count"]   += 1
+        zones_data[z]["types"][typ] = zones_data[z]["types"].get(typ, 0) + 1
+
+    result = []
+    for z, data in zones_data.items():
+        if data["count"] > 0:
+            result.append({
+                "zone": z,
+                "capital": round(data["capital"]),
+                "premium": round(data["premium"]),
+                "count": data["count"],
+                "types": data["types"]
+            })
+            
+    # Sort zones: 0, I, IIa, IIb, III, Inconnue
+    order = {"0": 0, "I": 1, "IIa": 2, "IIb": 3, "III": 4, "Inconnue": 5}
+    result.sort(key=lambda x: order.get(x["zone"], 6))
+
+    return jsonify(result)

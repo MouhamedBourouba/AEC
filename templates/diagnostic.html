@@ -1,0 +1,295 @@
+{% extends 'dashboard_base.html' %}
+{% block page_title %}Diagnostic & Recommendations{% endblock %}
+{% block page_subtitle %}Health check of the earthquake portfolio based on RPA classification{% endblock %}
+
+{% block content %}
+<section class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <!-- Portfolio Health Index -->
+    <div class="kpi-card" style="border-left: 4px solid var(--accent);">
+        <div class="kpi-content">
+            <div class="kpi-label">Overall Health Score</div>
+            <div class="kpi-value" id="healthScore">—</div>
+            <div class="kpi-label" style="font-size: 0.75rem;" id="healthStatus">Evaluating...</div>
+        </div>
+    </div>
+    
+    <!-- Balance Ratio -->
+    <div class="kpi-card" style="border-left: 4px solid #facc15;">
+        <div class="kpi-content">
+            <div class="kpi-label">High-Risk Exposure (Zone III & IIb)</div>
+            <div class="kpi-value" id="highRiskExposure">—</div>
+            <div class="kpi-label" style="font-size: 0.75rem;">% of Total Capital</div>
+        </div>
+    </div>
+    
+    <!-- Estimated MPL -->
+    <div class="kpi-card" style="border-left: 4px solid #f87171;">
+        <div class="kpi-content">
+            <div class="kpi-label">Portfolio MPL Baseline</div>
+            <div class="kpi-value" id="mplBaseline">—</div>
+            <div class="kpi-label" style="font-size: 0.75rem;">Standard RPA damage ratios</div>
+        </div>
+    </div>
+</section>
+
+<section class="charts-grid" style="margin-top: 1.5rem; grid-template-columns: 1fr 1fr;">
+    <!-- Vulnerability Gauge -->
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>Portfolio Vulnerability Distribution</h2>
+        </div>
+        <div class="chart-wrap donut-wrap" style="height: 250px;">
+            <canvas id="vulnChart"></canvas>
+        </div>
+        <div class="custom-legend" style="display: flex; justify-content: center; gap: 1.5rem; margin-top: 1rem;">
+            <div class="legend-item"><span class="legend-dot" style="background:#f87171"></span>Critical</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#facc15"></span>Warning</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>Safe</div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="chart-card" style="display: flex; flex-direction: column;">
+        <div class="chart-card-header">
+            <h2>Strategic Recommendations</h2>
+        </div>
+        <div id="recommendationsList" style="flex: 1; overflow-y: auto; padding-right: 0.5rem; display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+            <div style="color: var(--text-muted); text-align: center; margin-top: 2rem;">Generating insights...</div>
+        </div>
+    </div>
+</section>
+
+<section class="charts-grid" style="margin-top: 1.5rem; grid-template-columns: 1fr;">
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2>Wilaya Vulnerability Index</h2>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">Vulnerability = Capital Insured × Zone Risk Factor. Sorted by most vulnerable.</p>
+        </div>
+        <div id="diagGrid" class="ag-theme-alpine-dark ag-grid-container" style="height: 400px; width: 100%; border-radius: 0.5rem; margin-top: 1rem;"></div>
+    </div>
+</section>
+
+<style>
+    .rec-card {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background: var(--surface2);
+        border-left: 4px solid var(--border);
+    }
+    .rec-card.danger { border-left-color: #f87171; background: rgba(248, 113, 113, 0.05); }
+    .rec-card.warning { border-left-color: #facc15; background: rgba(250, 204, 21, 0.05); }
+    .rec-card.info { border-left-color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
+    .rec-card.success { border-left-color: #4ade80; background: rgba(74, 222, 128, 0.05); }
+    
+    .rec-title { font-weight: 600; margin-bottom: 0.25rem; font-size: 0.95rem; }
+    .rec-desc { font-size: 0.85rem; color: #cbd5e1; }
+    
+    .vuln-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+        min-width: 60px;
+    }
+    .vuln-critical { background-color: rgba(248, 113, 113, 0.2); color: #f87171; }
+    .vuln-warning { background-color: rgba(250, 204, 21, 0.2); color: #facc15; }
+    .vuln-safe { background-color: rgba(74, 222, 128, 0.2); color: #4ade80; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+const ZONE_RISK_FACTOR = {
+    "III": 0.50,
+    "IIb": 0.30,
+    "IIa": 0.15,
+    "I": 0.05,
+    "0": 0.00,
+    "Inconnue": 0.15 // Default to IIa
+};
+
+let gridApi;
+
+async function loadDiagnosticData() {
+    const res = await fetch(`/api/by-wilaya-map?dataset_id=${currentDatasetId}`);
+    const data = await res.json();
+    
+    if (!data || data.length === 0) return;
+    
+    let totalCapital = 0;
+    let highRiskCapital = 0;
+    let totalMpl = 0;
+    
+    // Process data to calculate vulnerability
+    const processedData = data.map(d => {
+        const zone = d.zone_rpa || "Inconnue";
+        const factor = ZONE_RISK_FACTOR[zone];
+        const vulnScore = d.total_capital * factor;
+        
+        totalCapital += d.total_capital;
+        if (zone === 'III' || zone === 'IIb') {
+            highRiskCapital += d.total_capital;
+        }
+        totalMpl += vulnScore;
+        
+        let status = "Safe";
+        if (zone === 'III' || vulnScore > 500000000) status = "Critical";
+        else if (zone === 'IIb' || vulnScore > 100000000) status = "Warning";
+        
+        return {
+            ...d,
+            vulnScore: vulnScore,
+            status: status
+        };
+    });
+    
+    // Calculate KPIs
+    const highRiskPct = (highRiskCapital / totalCapital) * 100;
+    document.getElementById('highRiskExposure').textContent = highRiskPct.toFixed(1) + '%';
+    document.getElementById('mplBaseline').textContent = fmtB(totalMpl) + ' DZD';
+    
+    let healthScore = 100 - (highRiskPct * 0.8); // Simple heuristic
+    document.getElementById('healthScore').textContent = healthScore.toFixed(0) + '/100';
+    
+    const healthStatusEl = document.getElementById('healthStatus');
+    if (healthScore > 75) { healthStatusEl.textContent = "Good Balance"; healthStatusEl.style.color = "#4ade80"; }
+    else if (healthScore > 50) { healthStatusEl.textContent = "Moderate Risk"; healthStatusEl.style.color = "#facc15"; }
+    else { healthStatusEl.textContent = "High Concentration Risk"; healthStatusEl.style.color = "#f87171"; }
+    
+    // Render chart
+    const statusCounts = { "Critical": 0, "Warning": 0, "Safe": 0 };
+    processedData.forEach(d => {
+        if (d.status === 'Critical') statusCounts['Critical'] += d.total_capital;
+        else if (d.status === 'Warning') statusCounts['Warning'] += d.total_capital;
+        else statusCounts['Safe'] += d.total_capital;
+    });
+    renderVulnChart(statusCounts);
+    
+    // Generate Recommendations
+    generateRecommendations(processedData, highRiskPct, totalCapital);
+    
+    // Render Grid
+    renderGrid(processedData);
+}
+
+function renderVulnChart(counts) {
+    const ctx = document.getElementById('vulnChart');
+    if (window.vulnChart) window.vulnChart.destroy();
+    
+    window.vulnChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Critical', 'Warning', 'Safe'],
+            datasets: [{
+                data: [counts['Critical'], counts['Warning'], counts['Safe']],
+                backgroundColor: ['#f87171', '#facc15', '#4ade80'],
+                borderWidth: 2,
+                borderColor: '#111827'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+function generateRecommendations(data, highRiskPct, totalCapital) {
+    const list = document.getElementById('recommendationsList');
+    let html = '';
+    
+    // 1. Overall Balance Rule
+    if (highRiskPct > 60) {
+        html += `<div class="rec-card danger">
+            <div class="rec-title">Over-concentration in High-Risk Zones</div>
+            <div class="rec-desc"><b>${highRiskPct.toFixed(1)}%</b> of your capital is exposed in Zone III and IIb. Consider increasing premiums or reducing underwriting capacity in these zones to balance the portfolio.</div>
+        </div>`;
+    } else if (highRiskPct < 30) {
+        html += `<div class="rec-card success">
+            <div class="rec-title">Healthy Portfolio Balance</div>
+            <div class="rec-desc">High-risk exposure is kept at <b>${highRiskPct.toFixed(1)}%</b>, which is well within safe margins. You have capacity to underwrite more profitable risks in Zone IIa and I.</div>
+        </div>`;
+    } else {
+        html += `<div class="rec-card warning">
+            <div class="rec-title">Moderate Concentration Risk</div>
+            <div class="rec-desc">Your portfolio has a standard distribution, but keep an eye on accumulation in specific wilayas.</div>
+        </div>`;
+    }
+    
+    // 2. Identify Top Critical Wilaya
+    const critical = [...data].filter(d => d.status === 'Critical').sort((a,b) => b.vulnScore - a.vulnScore);
+    if (critical.length > 0) {
+        const top = critical[0];
+        const pct = ((top.total_capital / totalCapital) * 100).toFixed(1);
+        html += `<div class="rec-card danger">
+            <div class="rec-title">Urgent Action: ${top.wilaya}</div>
+            <div class="rec-desc">This single wilaya represents <b>${pct}%</b> of your total portfolio capital while being in RPA <b>Zone ${top.zone_rpa}</b>. Evaluate purchasing specific proportional reinsurance treaties for this area.</div>
+        </div>`;
+    }
+    
+    // 3. Identify Opportunity
+    const safe = [...data].filter(d => d.status === 'Safe' && d.total_premium > 0).sort((a,b) => b.total_premium - a.total_premium);
+    if (safe.length > 0) {
+        const op = safe[0];
+        html += `<div class="rec-card info">
+            <div class="rec-title">Growth Opportunity: ${op.wilaya}</div>
+            <div class="rec-desc">This wilaya is in a low-risk zone (Zone ${op.zone_rpa}) and generates good premium. Target marketing efforts here to improve the overall portfolio equilibrium.</div>
+        </div>`;
+    }
+    
+    list.innerHTML = html;
+}
+
+function renderGrid(rowData) {
+    if (gridApi) gridApi.destroy();
+    
+    const gridOptions = {
+        rowData: rowData,
+        columnDefs: [
+            { field: 'wilaya', headerName: 'Wilaya', sortable: true, filter: true, flex: 2 },
+            { field: 'zone_rpa', headerName: 'Zone RPA', sortable: true, filter: true, width: 120 },
+            { 
+                field: 'total_capital', 
+                headerName: 'Capital Exposé (DZD)', 
+                sortable: true, 
+                flex: 2,
+                valueFormatter: params => fmt(params.value)
+            },
+            { 
+                field: 'vulnScore', 
+                headerName: 'Vulnerability Score', 
+                sortable: true, 
+                flex: 2,
+                valueFormatter: params => fmt(params.value)
+            },
+            { 
+                field: 'status', 
+                headerName: 'Diagnostic', 
+                sortable: true, 
+                width: 130,
+                cellRenderer: params => {
+                    const s = params.value;
+                    const cls = `vuln-${s.toLowerCase()}`;
+                    return `<span class="vuln-badge ${cls}">${s}</span>`;
+                }
+            }
+        ],
+        defaultColDef: { resizable: true },
+        pagination: true,
+        paginationPageSize: 15,
+        animateRows: true
+    };
+    
+    const gridDiv = document.querySelector('#diagGrid');
+    gridApi = agGrid.createGrid(gridDiv, gridOptions);
+    gridApi.applyColumnState({
+        state: [{ colId: 'vulnScore', sort: 'desc' }],
+        defaultState: { sort: null }
+    });
+}
+
+loadDiagnosticData();
+{% endblock %}
