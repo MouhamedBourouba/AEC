@@ -13,25 +13,25 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-theme-alpine-dark.css">
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.noStyle.js"></script>
     <style>
-        /* Override AG Grid theme to match our dark palette */
+        /* Override AG Grid theme to match GAM Assurances palette */
         .ag-theme-alpine-dark {
-            --ag-background-color: var(--surface, #111827);
-            --ag-odd-row-background-color: rgba(255,255,255,0.025);
-            --ag-header-background-color: #0d1424;
-            --ag-border-color: rgba(255,255,255,0.07);
+            --ag-background-color: #0b2118;
+            --ag-odd-row-background-color: rgba(187,202,20,0.03);
+            --ag-header-background-color: #071410;
+            --ag-border-color: rgba(255,255,255,0.08);
             --ag-row-border-color: rgba(255,255,255,0.05);
-            --ag-foreground-color: #f1f5f9;
-            --ag-secondary-foreground-color: #94a3b8;
+            --ag-foreground-color: #F5F5F0;
+            --ag-secondary-foreground-color: #7a9e8a;
             --ag-font-family: 'Inter', sans-serif;
             --ag-font-size: 13px;
-            --ag-row-hover-color: rgba(129,140,248,0.08);
-            --ag-selected-row-background-color: rgba(129,140,248,0.15);
-            --ag-range-selection-border-color: #818cf8;
-            --ag-input-focus-border-color: #818cf8;
+            --ag-row-hover-color: rgba(187,202,20,0.07);
+            --ag-selected-row-background-color: rgba(187,202,20,0.14);
+            --ag-range-selection-border-color: #BBCA14;
+            --ag-input-focus-border-color: #BBCA14;
         }
-        .ag-theme-alpine-dark .ag-header-cell-label { font-weight: 600; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
-        .ag-theme-alpine-dark .ag-paging-panel { border-top: 1px solid rgba(255,255,255,0.07); color: #94a3b8; font-size: 13px; }
-        .ag-theme-alpine-dark .ag-paging-button { color: #818cf8; }
+        .ag-theme-alpine-dark .ag-header-cell-label { font-weight: 600; color: #7a9e8a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .ag-theme-alpine-dark .ag-paging-panel { border-top: 1px solid rgba(255,255,255,0.08); color: #7a9e8a; font-size: 13px; }
+        .ag-theme-alpine-dark .ag-paging-button { color: #BBCA14; }
         .ag-grid-container { border-radius: 0 0 0.85rem 0.85rem; overflow: hidden; }
     </style>
     {% block head %}{% endblock %}
@@ -41,8 +41,7 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 4 4-6 4 10"/><path d="M3 21h18"/></svg>
-            <span class="logo-text">AEC Risk</span>
+            <img src="{{ url_for('static', filename='logo.webp') }}" alt="GAM Assurances" />
         </div>
         <nav class="sidebar-nav">
             <a href="/" class="nav-item">
@@ -115,12 +114,12 @@ const fmtB = (n) => {
 };
 
 const PALETTE = [
-    '#818cf8','#c084fc','#38bdf8','#34d399','#f472b6',
-    '#fb923c','#facc15','#a78bfa','#f87171','#4ade80',
-    '#22d3ee','#e879f9','#fbbf24','#60a5fa','#94a3b8'
+    '#BBCA14','#1A5E3F','#4ade80','#86efac','#a3e635',
+    '#65a30d','#d9f99d','#0D3D2A','#84cc16','#16a34a',
+    '#22c55e','#bef264','#4d7c0f','#ecfccb','#166534'
 ];
 
-Chart.defaults.color = '#94a3b8';
+Chart.defaults.color = '#7a9e8a';
 Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
 Chart.defaults.font.family = 'Inter, sans-serif';
 

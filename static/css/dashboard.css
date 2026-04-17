@@ -1,14 +1,16 @@
 /* ── Dashboard Layout ──────────────────────────────────────────────────────── */
 :root {
     --sidebar-w: 220px;
-    --bg: #0a0f1e;
-    --surface: #111827;
-    --surface2: #1a2235;
-    --border: rgba(255,255,255,0.07);
-    --text: #f1f5f9;
-    --muted: #64748b;
-    --accent: #818cf8;
-    --accent2: #c084fc;
+    --bg: #060e0a;
+    --surface: #0b2118;
+    --surface2: #112b1f;
+    --border: rgba(255,255,255,0.08);
+    --text: #F5F5F0;
+    --muted: #7a9e8a;
+    --accent: #BBCA14;
+    --accent2: #1A5E3F;
+    --danger: #f87171;
+    --success: #4ade80;
 }
 
 .dashboard-body {
@@ -28,35 +30,47 @@
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    padding: 1.5rem 1rem;
+    padding: 1.25rem 1rem 1rem;
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
     z-index: 100;
+    overflow: hidden;
 }
 
 .sidebar-logo {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.6rem;
-    margin-bottom: 2rem;
-    padding: 0 0.5rem;
-    color: var(--accent);
+    margin-bottom: 1.25rem;
+    padding: 0 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.sidebar-logo img {
+    width: 100px;
+    max-height: 60px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
 }
 
 .logo-text {
     font-size: 1.1rem;
     font-weight: 700;
-    background: linear-gradient(to right, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--accent);
 }
 
 .sidebar-nav {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 0.5rem;
 }
 
 .nav-item {
@@ -73,7 +87,7 @@
 }
 
 .nav-item:hover, .nav-item.active {
-    background: rgba(129,140,248,0.12);
+    background: rgba(187,202,20,0.1);
     color: var(--text);
 }
 
@@ -101,7 +115,7 @@
     font-size: 1.75rem;
     font-weight: 800;
     margin: 0 0 0.25rem;
-    background: linear-gradient(to right, #e2e8f0, var(--accent));
+    background: linear-gradient(to right, #F5F5F0, var(--accent));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -147,20 +161,20 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(129,140,248,0.05), transparent);
+    background: linear-gradient(135deg, rgba(187,202,20,0.05), transparent);
     pointer-events: none;
 }
 
 .kpi-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(129,140,248,0.3);
+    border-color: rgba(187,202,20,0.3);
 }
 
 .kpi-icon {
     flex-shrink: 0;
     width: 48px;
     height: 48px;
-    background: rgba(129,140,248,0.1);
+    background: rgba(187,202,20,0.1);
     border-radius: 0.75rem;
     display: flex;
     align-items: center;
@@ -222,7 +236,7 @@
 .chart-badge {
     font-size: 0.7rem;
     font-weight: 600;
-    background: rgba(129,140,248,0.18);
+    background: rgba(187,202,20,0.15);
     color: var(--accent);
     padding: 0.2rem 0.6rem;
     border-radius: 2rem;
@@ -313,7 +327,7 @@ tbody tr {
 }
 
 tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: rgba(255,255,255,0.025); }
+tbody tr:hover { background: rgba(187,202,20,0.04); }
 
 tbody td {
     padding: 0.9rem 1.25rem;

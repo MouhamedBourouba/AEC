@@ -1,9 +1,9 @@
 :root {
-    --primary-color: #4f46e5;
-    --primary-hover: #4338ca;
-    --bg-color: #0f172a;
-    --text-color: #f8fafc;
-    --card-bg: #1e293b;
+    --primary-color: #BBCA14;
+    --primary-hover: #a0ae10;
+    --bg-color: #060e0a;
+    --text-color: #F5F5F0;
+    --card-bg: #0b2118;
 }
 
 * {
@@ -38,21 +38,21 @@ h1 {
     font-size: 3.5rem;
     font-weight: 800;
     margin-bottom: 0.5rem;
-    background: linear-gradient(to right, #818cf8, #c084fc);
+    background: linear-gradient(to right, #BBCA14, #1A5E3F);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 header p {
     font-size: 1.25rem;
-    color: #94a3b8;
+    color: #7a9e8a;
 }
 
 .card {
     background-color: var(--card-bg);
     padding: 2.5rem;
     border-radius: 1rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease;
 }
 
@@ -63,21 +63,21 @@ header p {
 h2 {
     font-size: 2rem;
     margin-bottom: 1rem;
-    color: #e2e8f0;
+    color: #F5F5F0;
 }
 
 .card p {
     margin-bottom: 2rem;
-    color: #cbd5e1;
+    color: #a8c4b0;
 }
 
 .btn {
     background-color: var(--primary-color);
-    color: white;
+    color: #0D3D2A;
     border: none;
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     border-radius: 0.5rem;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;

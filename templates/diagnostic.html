@@ -54,7 +54,7 @@
             <h2>Strategic Recommendations</h2>
         </div>
         <div id="recommendationsList" style="flex: 1; overflow-y: auto; padding-right: 0.5rem; display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-            <div style="color: var(--text-muted); text-align: center; margin-top: 2rem;">Generating insights...</div>
+            <div id="insightsPlaceholder" style="color: var(--muted); text-align: center; margin-top: 2rem;">Generating insights…</div>
         </div>
     </div>
 </section>
@@ -110,74 +110,83 @@ const ZONE_RISK_FACTOR = {
 };
 
 let gridApi;
+let vulnChartInstance = null;
 
 async function loadDiagnosticData() {
-    const res = await fetch(`/api/by-wilaya-map?dataset_id=${currentDatasetId}`);
-    const data = await res.json();
-    
-    if (!data || data.length === 0) return;
-    
-    let totalCapital = 0;
-    let highRiskCapital = 0;
-    let totalMpl = 0;
-    
-    // Process data to calculate vulnerability
-    const processedData = data.map(d => {
-        const zone = d.zone_rpa || "Inconnue";
-        const factor = ZONE_RISK_FACTOR[zone];
-        const vulnScore = d.total_capital * factor;
-        
-        totalCapital += d.total_capital;
-        if (zone === 'III' || zone === 'IIb') {
-            highRiskCapital += d.total_capital;
+    const list = document.getElementById('recommendationsList');
+    const placeholder = document.getElementById('insightsPlaceholder');
+    try {
+        const res = await fetch(`/api/by-wilaya-map?dataset_id=${currentDatasetId}`);
+        if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+        const data = await res.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+            if (placeholder) placeholder.textContent = 'No wilaya data available for this dataset.';
+            return;
         }
-        totalMpl += vulnScore;
-        
-        let status = "Safe";
-        if (zone === 'III' || vulnScore > 500000000) status = "Critical";
-        else if (zone === 'IIb' || vulnScore > 100000000) status = "Warning";
-        
-        return {
-            ...d,
-            vulnScore: vulnScore,
-            status: status
-        };
-    });
-    
-    // Calculate KPIs
-    const highRiskPct = (highRiskCapital / totalCapital) * 100;
-    document.getElementById('highRiskExposure').textContent = highRiskPct.toFixed(1) + '%';
-    document.getElementById('mplBaseline').textContent = fmtB(totalMpl) + ' DZD';
-    
-    let healthScore = 100 - (highRiskPct * 0.8); // Simple heuristic
-    document.getElementById('healthScore').textContent = healthScore.toFixed(0) + '/100';
-    
-    const healthStatusEl = document.getElementById('healthStatus');
-    if (healthScore > 75) { healthStatusEl.textContent = "Good Balance"; healthStatusEl.style.color = "#4ade80"; }
-    else if (healthScore > 50) { healthStatusEl.textContent = "Moderate Risk"; healthStatusEl.style.color = "#facc15"; }
-    else { healthStatusEl.textContent = "High Concentration Risk"; healthStatusEl.style.color = "#f87171"; }
-    
-    // Render chart
-    const statusCounts = { "Critical": 0, "Warning": 0, "Safe": 0 };
-    processedData.forEach(d => {
-        if (d.status === 'Critical') statusCounts['Critical'] += d.total_capital;
-        else if (d.status === 'Warning') statusCounts['Warning'] += d.total_capital;
-        else statusCounts['Safe'] += d.total_capital;
-    });
-    renderVulnChart(statusCounts);
-    
-    // Generate Recommendations
-    generateRecommendations(processedData, highRiskPct, totalCapital);
-    
-    // Render Grid
-    renderGrid(processedData);
+
+        let totalCapital = 0;
+        let highRiskCapital = 0;
+        let totalMpl = 0;
+
+        // Process data to calculate vulnerability
+        const processedData = data.map(d => {
+            const zone = d.zone_rpa || "Inconnue";
+            const factor = ZONE_RISK_FACTOR[zone] ?? 0.15;
+            const vulnScore = (d.total_capital || 0) * factor;
+
+            totalCapital += (d.total_capital || 0);
+            if (zone === 'III' || zone === 'IIb') {
+                highRiskCapital += (d.total_capital || 0);
+            }
+            totalMpl += vulnScore;
+
+            let status = "Safe";
+            if (zone === 'III' || vulnScore > 500000000) status = "Critical";
+            else if (zone === 'IIb' || vulnScore > 100000000) status = "Warning";
+
+            return { ...d, vulnScore, status };
+        });
+
+        // Calculate KPIs
+        const highRiskPct = totalCapital > 0 ? (highRiskCapital / totalCapital) * 100 : 0;
+        document.getElementById('highRiskExposure').textContent = highRiskPct.toFixed(1) + '%';
+        document.getElementById('mplBaseline').textContent = fmtB(totalMpl) + ' DZD';
+
+        let healthScore = Math.max(0, 100 - (highRiskPct * 0.8));
+        document.getElementById('healthScore').textContent = healthScore.toFixed(0) + '/100';
+
+        const healthStatusEl = document.getElementById('healthStatus');
+        if (healthScore > 75) { healthStatusEl.textContent = "Good Balance"; healthStatusEl.style.color = "#4ade80"; }
+        else if (healthScore > 50) { healthStatusEl.textContent = "Moderate Risk"; healthStatusEl.style.color = "#facc15"; }
+        else { healthStatusEl.textContent = "High Concentration Risk"; healthStatusEl.style.color = "#f87171"; }
+
+        // Render chart
+        const statusCounts = { "Critical": 0, "Warning": 0, "Safe": 0 };
+        processedData.forEach(d => {
+            if (d.status === 'Critical') statusCounts['Critical'] += d.total_capital;
+            else if (d.status === 'Warning') statusCounts['Warning'] += d.total_capital;
+            else statusCounts['Safe'] += d.total_capital;
+        });
+        renderVulnChart(statusCounts);
+
+        // Generate Recommendations
+        generateRecommendations(processedData, highRiskPct, totalCapital);
+
+        // Render Grid
+        renderGrid(processedData);
+
+    } catch (err) {
+        console.error('Diagnostic load error:', err);
+        if (list) list.innerHTML = `<div class="rec-card danger"><div class="rec-title">Failed to load diagnostic data</div><div class="rec-desc">${err.message}</div></div>`;
+    }
 }
 
 function renderVulnChart(counts) {
     const ctx = document.getElementById('vulnChart');
-    if (window.vulnChart) window.vulnChart.destroy();
-    
-    window.vulnChart = new Chart(ctx, {
+    if (vulnChartInstance) vulnChartInstance.destroy();
+
+    vulnChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['Critical', 'Warning', 'Safe'],
@@ -185,7 +194,7 @@ function renderVulnChart(counts) {
                 data: [counts['Critical'], counts['Warning'], counts['Safe']],
                 backgroundColor: ['#f87171', '#facc15', '#4ade80'],
                 borderWidth: 2,
-                borderColor: '#111827'
+                borderColor: '#0b2118'
             }]
         },
         options: {
@@ -291,5 +300,9 @@ function renderGrid(rowData) {
     });
 }
 
-loadDiagnosticData();
+loadDiagnosticData().catch(err => {
+    console.error('Unhandled diagnostic error:', err);
+    const list = document.getElementById('recommendationsList');
+    if (list) list.innerHTML = `<div class="rec-card danger"><div class="rec-title">Unexpected Error</div><div class="rec-desc">${err.message}</div></div>`;
+});
 {% endblock %}
